@@ -1,0 +1,1677 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#e74c8b">
+<title>Rachel Clinic — Foto Pasien</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+:root{
+  /* ── palet pastel hangat (selaras sistem) ── */
+  --pink:#c56d83;--pink2:#dca0ae;--pink-dim:rgba(207,133,149,.12);
+  --teal:#62b3a3;--teal-dim:rgba(98,179,163,.15);--gold:#c9a35a;--pill:40px;
+  --bg:#f9f4ef;--card:#fffdfb;--border:#ece0d3;
+  --text:#463a2c;--text2:#6f6051;--text3:#a89c8c;
+  --danger:#c5675f;--success:#5a9a72;
+  --warn:#c98a3e;--lav:#9b8bc4;
+  --shadow-card:0 6px 18px rgba(150,115,65,0.07);
+  --shadow-soft:0 10px 30px rgba(150,115,65,0.09);
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bot:env(safe-area-inset-bottom,0px);
+}
+html,body{height:100%;overflow:hidden;background:var(--bg);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--text);}
+
+/* ── APP SHELL ── */
+#app{position:fixed;inset:0;overflow:hidden;}
+.screen{position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;
+  transform:translateX(100%);transition:transform .28s cubic-bezier(.4,0,.2,1);will-change:transform;}
+.screen.active{transform:translateX(0);}
+.screen.prev{transform:translateX(-30%);}
+
+/* ── HEADER ── */
+.hdr{padding:calc(var(--safe-top) + 14px) 16px 14px;
+  background:linear-gradient(135deg,var(--pink),var(--pink2));color:#fff;
+  display:flex;align-items:center;gap:12px;flex-shrink:0;
+  box-shadow:0 4px 16px rgba(197,109,131,.28);}
+.hdr-back{width:36px;height:36px;border-radius:50%;background:rgba(255,255,255,.2);
+  border:none;color:#fff;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.hdr-title{flex:1;font-size:16px;font-weight:700;letter-spacing:-.3px;}
+.hdr-sub{font-size:11px;opacity:.8;margin-top:1px;}
+.hdr-action{padding:7px 14px;border-radius:20px;background:rgba(255,255,255,.2);border:1px solid rgba(255,255,255,.4);
+  color:#fff;font-size:12px;font-weight:600;cursor:pointer;}
+
+/* ── SCROLL BODY ── */
+.body{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;}
+
+/* ── SEARCH SCREEN ── */
+.search-wrap{padding:16px;}
+.search-box{position:relative;}
+.search-box input{width:100%;padding:15px 16px 15px 44px;border:1px solid var(--border);
+  border-radius:var(--pill,40px);background:var(--card);font-size:15px;color:var(--text);outline:none;
+  transition:.2s;box-shadow:var(--shadow-card);}
+.search-box input:focus{border-color:var(--pink);box-shadow:0 0 0 3px var(--pink-dim);}
+.search-icon{position:absolute;left:15px;top:50%;transform:translateY(-50%);font-size:18px;color:var(--text3);}
+.section-label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;
+  padding:16px 16px 8px;}
+.patient-list{padding:0 16px 16px;}
+.patient-item{background:var(--card);border:none;border-radius:18px;
+  padding:14px 16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;cursor:pointer;
+  transition:.15s;box-shadow:var(--shadow-card);}
+.patient-item:active{transform:scale(.98);background:var(--bg);}
+.patient-avatar{width:46px;height:46px;border-radius:50%;
+  background:linear-gradient(135deg,var(--pink-dim),rgba(98,179,163,.15));
+  display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:700;
+  color:var(--pink);flex-shrink:0;}
+.patient-name{font-weight:600;font-size:14px;color:var(--text);}
+.patient-meta{font-size:11px;color:var(--text3);margin-top:2px;}
+.patient-arrow{font-size:16px;color:var(--text3);margin-left:auto;}
+.patient-foto-count{font-size:10px;font-weight:700;padding:3px 10px;border-radius:20px;
+  background:var(--pink-dim);color:var(--pink);}
+
+/* ── PATIENT SCREEN ── */
+.tab-bar{display:flex;background:var(--card);border-bottom:1px solid var(--border);flex-shrink:0;
+  box-shadow:var(--shadow-card);}
+.tab{flex:1;padding:12px 8px;text-align:center;font-size:11px;font-weight:700;
+  color:var(--text3);border:none;background:none;cursor:pointer;letter-spacing:.3px;
+  border-bottom:2px solid transparent;margin-bottom:-2px;transition:.15s;}
+.tab.active{color:var(--pink);border-bottom-color:var(--pink);}
+.foto-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:14px;}
+.foto-card{background:var(--card);border-radius:18px;overflow:hidden;
+  box-shadow:var(--shadow-card);cursor:pointer;transition:.15s;}
+.foto-card:active{transform:scale(.97);}
+.foto-thumb{width:100%;aspect-ratio:3/4;object-fit:cover;display:block;}
+.foto-thumb-placeholder{width:100%;aspect-ratio:3/4;background:var(--bg);
+  display:flex;align-items:center;justify-content:center;font-size:32px;}
+.foto-info{padding:9px 10px;}
+.foto-tipe{display:inline-block;font-size:9px;font-weight:700;padding:3px 10px;border-radius:20px;margin-bottom:4px;}
+.tipe-sebelum{background:rgba(201,138,62,.15);color:var(--warn);}
+.tipe-sesudah{background:rgba(90,154,114,.16);color:var(--success);}
+.tipe-progress{background:rgba(155,139,196,.16);color:var(--lav);}
+.foto-date{font-size:10px;color:var(--text3);}
+.foto-area{font-size:11px;font-weight:500;color:var(--text2);margin-top:1px;}
+
+/* ── FAB ── */
+.fab{position:absolute;bottom:calc(24px + var(--safe-bot));right:20px;width:58px;height:58px;
+  border-radius:50%;background:linear-gradient(135deg,var(--pink),var(--pink2));color:#fff;font-size:26px;border:none;
+  box-shadow:0 8px 22px rgba(197,109,131,.4);cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:.15s;z-index:10;}
+.fab:active{transform:scale(.93);}
+.empty-state{text-align:center;padding:50px 24px;color:var(--text3);}
+.empty-state .icon{font-size:52px;margin-bottom:14px;}
+.empty-state .msg{font-size:14px;line-height:1.6;}
+
+/* ── ADD SCREEN ── */
+.form-section{padding:16px;}
+.form-label{font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;}
+.chip-group{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px;}
+.chip{padding:9px 18px;border-radius:var(--pill,40px);border:1px solid var(--border);background:var(--card);
+  font-size:13px;font-weight:600;color:var(--text2);cursor:pointer;transition:.15s;box-shadow:var(--shadow-card);}
+.chip.sel{border-color:transparent;background:var(--pink-dim);color:var(--pink);}
+.chip.sel-teal{border-color:transparent;background:var(--teal-dim,rgba(98,179,163,.15));color:var(--teal);}
+.chip:active{transform:scale(.96);}
+
+/* Camera / Preview */
+.camera-wrap{position:relative;background:#000;border-radius:18px;overflow:hidden;margin-bottom:16px;}
+#camera-video{width:100%;display:block;max-height:55vw;object-fit:cover;}
+#preview-img{width:100%;display:block;max-height:65vw;object-fit:contain;background:#111;}
+.camera-overlay{position:absolute;bottom:0;left:0;right:0;padding:12px;
+  display:flex;justify-content:space-between;align-items:center;
+  background:linear-gradient(transparent,rgba(0,0,0,.5));}
+.cam-btn{width:48px;height:48px;border-radius:50%;border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;font-size:20px;transition:.15s;}
+.cam-btn:active{transform:scale(.9);}
+.cam-btn-capture{width:66px;height:66px;background:#fff;box-shadow:0 0 0 4px rgba(255,255,255,.4);}
+.cam-btn-flip{background:rgba(255,255,255,.2);color:#fff;}
+.cam-btn-gallery{background:rgba(255,255,255,.2);color:#fff;}
+.cam-placeholder{padding:48px 24px;text-align:center;color:rgba(255,255,255,.5);font-size:14px;}
+.cam-placeholder .icon{font-size:44px;margin-bottom:8px;}
+
+textarea.form-input{width:100%;padding:13px 15px;border:1px solid var(--border);border-radius:16px;
+  background:var(--card);font-size:14px;color:var(--text);resize:none;outline:none;
+  font-family:inherit;transition:.2s;box-shadow:var(--shadow-card);}
+textarea.form-input:focus{border-color:var(--pink);box-shadow:0 0 0 3px var(--pink-dim);}
+input.form-input{width:100%;padding:13px 16px;border:1px solid var(--border);border-radius:var(--pill);
+  background:var(--card);font-size:14px;color:var(--text);outline:none;transition:.2s;box-shadow:var(--shadow-card);}
+input.form-input:focus{border-color:var(--pink);box-shadow:0 0 0 3px var(--pink-dim);}
+
+.btn-full{width:100%;padding:16px;border-radius:var(--pill);border:none;font-size:15px;font-weight:700;
+  cursor:pointer;transition:.15s;letter-spacing:.3px;}
+.btn-full:active{transform:scale(.98);}
+.btn-pink{background:linear-gradient(135deg,var(--pink),var(--pink2));color:#fff;box-shadow:0 8px 20px rgba(197,109,131,.32);}
+.btn-outline{background:var(--card);color:var(--text2);border:2px solid var(--border) !important;border:none;}
+.btn-danger{background:var(--danger);color:#fff;}
+.btn-row{display:flex;gap:10px;padding:0 16px 16px;}
+
+/* ── DETAIL SCREEN ── */
+.detail-img-wrap{background:#000;flex-shrink:0;}
+#detail-img{width:100%;display:block;max-height:65vw;object-fit:contain;}
+.detail-info{padding:16px;background:var(--card);border-top:1px solid var(--border);}
+.detail-badge-row{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;}
+.detail-badge{font-size:11px;font-weight:700;padding:4px 12px;border-radius:10px;}
+.detail-keterangan{font-size:14px;color:var(--text2);margin-bottom:10px;line-height:1.6;}
+.detail-meta{font-size:11px;color:var(--text3);}
+
+/* ── COMPARE SCREEN ── */
+.compare-labels{display:flex;background:#1e293b;flex-shrink:0;}
+.compare-label{flex:1;text-align:center;padding:10px;font-size:11px;font-weight:700;
+  text-transform:uppercase;letter-spacing:.5px;}
+.compare-label.before{color:#f59e0b;}
+.compare-label.after{color:#22c55e;}
+.compare-outer{position:relative;flex:1;overflow:hidden;background:#000;touch-action:none;}
+.compare-img{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:contain;}
+.compare-clip{position:absolute;top:0;left:0;height:100%;overflow:hidden;}
+.compare-clip img{display:block;height:100%;object-fit:contain;}
+.compare-handle-line{position:absolute;top:0;width:3px;background:rgba(255,255,255,.9);
+  height:100%;transform:translateX(-50%);pointer-events:none;
+  box-shadow:0 0 8px rgba(0,0,0,.5);}
+.compare-handle-circle{position:absolute;top:50%;width:48px;height:48px;background:#fff;
+  border-radius:50%;transform:translate(-50%,-50%);display:flex;align-items:center;justify-content:center;
+  font-size:16px;font-weight:700;box-shadow:0 2px 12px rgba(0,0,0,.4);cursor:ew-resize;user-select:none;}
+.compare-hint{position:absolute;bottom:16px;left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.6);color:#fff;font-size:11px;padding:6px 14px;border-radius:20px;
+  pointer-events:none;white-space:nowrap;}
+.compare-dates{display:flex;background:#0f172a;flex-shrink:0;}
+.compare-date{flex:1;text-align:center;padding:8px;font-size:10px;color:rgba(255,255,255,.5);}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:100;
+  display:flex;align-items:flex-end;opacity:0;pointer-events:none;transition:.25s;}
+.modal-overlay.open{opacity:1;pointer-events:all;}
+.modal-sheet{width:100%;background:var(--card);border-radius:24px 24px 0 0;
+  padding:16px;padding-bottom:calc(16px + var(--safe-bot));
+  transform:translateY(100%);transition:.25s;}
+.modal-overlay.open .modal-sheet{transform:translateY(0);}
+.modal-handle{width:40px;height:4px;background:var(--border);border-radius:2px;
+  margin:0 auto 20px;}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:16px;text-align:center;}
+
+/* ── TOAST ── */
+#toast{position:fixed;bottom:calc(24px + var(--safe-bot));left:50%;transform:translateX(-50%) translateY(20px);
+  background:#463a2c;color:#fff;padding:11px 22px;border-radius:var(--pill);font-size:13px;
+  opacity:0;transition:.3s;z-index:200;white-space:nowrap;pointer-events:none;}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ── LOGIN OVERLAY ── */
+#login-overlay{position:fixed;inset:0;
+  background:radial-gradient(120% 80% at 80% 0%,var(--pink-dim) 0%,transparent 55%),linear-gradient(135deg,#fdf6f0 0%,var(--bg) 100%);
+  z-index:300;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px 24px;
+  padding-top:calc(var(--safe-top) + 32px);padding-bottom:calc(var(--safe-bot) + 32px);}
+#login-overlay.hidden{display:none;}
+.login-brand{font-size:38px;font-weight:300;letter-spacing:6px;color:var(--pink);margin-bottom:4px;font-family:-apple-system,sans-serif;}
+.login-sub{font-size:10px;letter-spacing:4px;text-transform:uppercase;color:var(--text3);margin-bottom:48px;}
+.login-field{width:100%;max-width:320px;margin-bottom:14px;}
+.login-field label{display:block;font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+.login-field input{width:100%;padding:15px 18px;border:1px solid var(--border);border-radius:var(--pill);
+  background:var(--card);font-size:15px;color:var(--text);outline:none;transition:.2s;box-shadow:var(--shadow-card);}
+.login-field input:focus{border-color:var(--pink);box-shadow:0 0 0 3px var(--pink-dim);}
+.login-btn{width:100%;max-width:320px;padding:16px;border-radius:var(--pill);border:none;
+  background:linear-gradient(135deg,var(--pink),var(--pink2));
+  color:#fff;font-size:15px;font-weight:700;cursor:pointer;box-shadow:0 10px 24px rgba(197,109,131,.34);
+  letter-spacing:.3px;transition:.15s;margin-top:4px;}
+.login-btn:active{transform:scale(.98);}
+.login-err{color:var(--danger);font-size:12px;margin-top:12px;text-align:center;min-height:16px;max-width:320px;}
+
+/* ── LOADING ── */
+.spinner{display:inline-block;width:20px;height:20px;border:2px solid rgba(255,255,255,.3);
+  border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* date group */
+.date-group-label{padding:12px 16px 4px;font-size:11px;font-weight:700;color:var(--text3);
+  text-transform:uppercase;letter-spacing:.5px;}
+
+/* ── BOTTOM NAV ── */
+.bottom-nav{position:fixed;bottom:0;left:0;right:0;z-index:50;
+  display:flex;background:var(--card);border-top:1px solid var(--border);
+  padding-bottom:var(--safe-bot);box-shadow:0 -4px 18px rgba(150,115,65,.08);}
+.bn-item{flex:1;border:none;background:none;padding:9px 4px 7px;cursor:pointer;
+  display:flex;flex-direction:column;align-items:center;gap:3px;
+  color:var(--text3);font-size:10px;font-weight:700;letter-spacing:.2px;transition:.15s;}
+.bn-item .bn-ic{font-size:21px;line-height:1;}
+.bn-item.active{color:var(--pink);}
+.bn-item:active{transform:scale(.94);}
+
+/* ── KOMISI ── */
+.komisi-filter{padding:16px;}
+.komisi-summary{margin:4px 16px 8px;background:linear-gradient(135deg,var(--pink),var(--pink2));
+  color:#fff;border-radius:22px;padding:20px 22px;box-shadow:0 10px 26px rgba(197,109,131,.3);}
+.ks-label{font-size:11px;opacity:.85;text-transform:uppercase;letter-spacing:.6px;font-weight:700;}
+.ks-value{font-size:27px;font-weight:800;margin-top:4px;letter-spacing:-.5px;}
+.ks-sub{font-size:11px;opacity:.85;margin-top:3px;}
+.komisi-day{display:flex;justify-content:space-between;align-items:center;padding:14px 16px 6px;
+  font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.4px;}
+.komisi-item{display:flex;align-items:center;gap:10px;margin:0 16px 8px;background:var(--card);
+  border:none;border-radius:16px;padding:13px 15px;box-shadow:var(--shadow-card);}
+.ki-jasa{font-size:14px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ki-meta{font-size:11px;color:var(--text3);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.ki-komisi{font-size:14px;font-weight:700;color:var(--pink);white-space:nowrap;flex-shrink:0;}
+</style>
+<script src="/static/qrcode.min.js"></script>
+</head>
+<body>
+<!-- LOGIN OVERLAY -->
+<div id="login-overlay">
+  <div class="login-brand">RACHEL</div>
+  <div class="login-sub">Foto Pasien · Mobile</div>
+  <div class="login-field">
+    <label>Username</label>
+    <input id="l-user" type="text" autocomplete="username" autocapitalize="none" placeholder="username" inputmode="text">
+  </div>
+  <div class="login-field">
+    <label>Password</label>
+    <input id="l-pass" type="password" autocomplete="current-password" placeholder="••••••••">
+  </div>
+  <button class="login-btn" onclick="doMobileLogin()">Masuk</button>
+  <div class="login-err" id="login-err"></div>
+  <div style="margin-top:36px;font-size:10px;color:var(--text3);letter-spacing:1.5px;text-align:center">copyright by UCHAHUNT &mdash; 2026</div>
+</div>
+
+<div id="app">
+  <div id="scr-search" class="screen active"></div>
+  <div id="scr-komisi" class="screen"></div>
+  <div id="scr-kit" class="screen"></div>
+  <div id="scr-kit-req" class="screen"></div>
+  <div id="scr-serah" class="screen"></div>
+  <div id="scr-patient" class="screen"></div>
+  <div id="scr-add" class="screen"></div>
+  <div id="scr-detail" class="screen"></div>
+  <div id="scr-compare" class="screen"></div>
+</div>
+<!-- BOTTOM NAV (perawat/beautician) -->
+<div class="bottom-nav" id="bottom-nav" style="display:none;">
+  <button class="bn-item" data-scr="scr-search" onclick="navHome('scr-search')">
+    <span class="bn-ic">📸</span>Foto Pasien</button>
+  <button class="bn-item" data-scr="scr-kit" onclick="navHome('scr-kit')">
+    <span class="bn-ic">🧰</span>Kit Saya</button>
+  <button class="bn-item" data-scr="scr-serah" onclick="navHome('scr-serah')">
+    <span class="bn-ic">🔑</span>Serah Kunci</button>
+  <button class="bn-item" data-scr="scr-komisi" onclick="navHome('scr-komisi')">
+    <span class="bn-ic">💰</span>Komisi</button>
+</div>
+<div class="modal-overlay" id="modal-delete">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Hapus Foto?</div>
+    <p style="text-align:center;font-size:13px;color:var(--text2);margin-bottom:20px;">
+      Foto ini akan dihapus permanen dan tidak bisa dikembalikan.
+    </p>
+    <button class="btn-full btn-danger" id="modal-delete-confirm">Hapus</button>
+    <button class="btn-full btn-outline" style="margin-top:10px;" onclick="closeModal()">Batal</button>
+  </div>
+</div>
+<div id="toast"></div>
+
+<script>
+// ── STATE ─────────────────────────────────────────────────
+const state = {
+  user: null,          // logged-in user
+  token: null,         // session token
+  patient: null,       // {kd_pasien, nm_pasien, ...}
+  photos: [],          // all photos for current patient
+  activeTab: 'semua',
+  stream: null,        // MediaStream
+  facingMode: 'environment',
+  capturedDataUrl: null,
+  detailPhoto: null,
+  comparePhotos: { before: null, after: null },
+  pendingDeleteId: null,
+};
+
+// ── AUTH PERSISTENCE ──────────────────────────────────────
+const STORAGE_KEY = 'rc_mobile_session';
+function saveSession(user, token) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify({user, token}));
+}
+function loadSession() {
+  try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null'); } catch { return null; }
+}
+function clearSession() { localStorage.removeItem(STORAGE_KEY); }
+
+// ── API ───────────────────────────────────────────────────
+const BASE = window.location.origin;
+async function api(path, opts={}) {
+  const hdrs = { 'Content-Type': 'application/json' };
+  if (state.token) hdrs['X-Token'] = state.token;
+  const res = await fetch(BASE + path, {
+    headers: hdrs,
+    ...opts,
+    body: opts.body ? JSON.stringify(opts.body) : undefined,
+  });
+  return res.json();
+}
+
+// ── DOM HELPERS ───────────────────────────────────────────
+const $ = id => document.getElementById(id);
+// Tanggal LOKAL sistem → 'YYYY-MM-DD' (hindari toISOString/UTC).
+function localDate(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function todayLocal() { return localDate(); }
+function show(screenId) {
+  const prev = document.querySelector('.screen.active');
+  const next = $(screenId);
+  if (!next || next === prev) return;
+  prev?.classList.remove('active');
+  prev?.classList.add('prev');
+  next.classList.add('active');
+  setTimeout(() => prev?.classList.remove('prev'), 300);
+  updateBottomNav();
+}
+function goBack(screenId) {
+  const prev = document.querySelector('.screen.active');
+  const next = $(screenId);
+  if (!next || next === prev) return;
+  // Letakkan layar tujuan sedikit di kiri, lalu geser masuk SAMBIL menandai active
+  // (tanpa active, layar akan balik ke posisi default di luar layar → blank putih)
+  next.classList.remove('prev');
+  next.style.transition = 'none';
+  next.style.transform  = 'translateX(-30%)';
+  next.classList.add('active');
+  void next.offsetWidth;                       // paksa reflow agar transisi berikutnya beranimasi
+  next.style.transition = 'transform .28s cubic-bezier(.4,0,.2,1)';
+  next.style.transform  = 'translateX(0)';
+  if (prev) { prev.classList.remove('active','prev'); }  // layar lama geser keluar ke kanan
+  setTimeout(() => { next.style.transition = ''; next.style.transform = ''; }, 300);
+  updateBottomNav();
+}
+
+function toast(msg, dur=2500) {
+  const el = $('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), dur);
+}
+function closeModal() {
+  document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('open'));
+}
+
+// ── SCREEN: SEARCH ────────────────────────────────────────
+async function renderSearch(query='') {
+  const s = $('scr-search');
+  const deep = window.location.pathname.match(/\/mobile\/foto\/(.+)/);
+  if (deep) {
+    const kd = decodeURIComponent(deep[1]);
+    const p = await api(`/api/pasien/${kd}`);
+    if (p) { openPatient(p); return; }
+  }
+
+  // Shell (termasuk input) dirender SEKALI. Saat mengetik hanya daftar hasil yang
+  // diperbarui — input TIDAK disentuh, supaya caret tidak lompat ke awal teks.
+  s.innerHTML = `
+  <div class="hdr">
+    <div style="flex:1;">
+      <div class="hdr-title">📸 Foto Pasien</div>
+      <div class="hdr-sub">${state.user?.nama || 'Rachel Clinic'}</div>
+    </div>
+    <button class="hdr-action" onclick="doMobileLogout()" style="font-size:11px;opacity:.85">Keluar</button>
+  </div>
+  <div class="body" style="padding-bottom:calc(76px + var(--safe-bot));">
+    <div class="search-wrap">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input id="srch" type="search" placeholder="Cari nama atau kode pasien..."
+          value="${query}" autocomplete="off" inputmode="search">
+      </div>
+    </div>
+    <div class="section-label" id="search-label">${query ? 'Hasil Pencarian' : 'Daftar Pasien'}</div>
+    <div class="patient-list" id="patient-list">
+      <div class="empty-state" style="padding-top:24px;"><div class="icon">⏳</div><div class="msg">Memuat...</div></div>
+    </div>
+    <div style="text-align:center;font-size:9px;color:var(--text3);letter-spacing:1.5px;padding:22px 0 6px">copyright by UCHAHUNT &mdash; 2026</div>
+  </div>`;
+
+  const inp = s.querySelector('#srch');
+  inp.focus();
+  let debounce;
+  inp.addEventListener('input', () => {
+    clearTimeout(debounce);
+    debounce = setTimeout(() => updateSearchResults(inp.value.trim()), 300);
+  });
+  inp.addEventListener('keydown', e => { if (e.key==='Enter') inp.blur(); });
+  updateBottomNav();
+  updateSearchResults(query);
+}
+
+// Update HANYA daftar hasil + label. Input pencarian tidak dirender ulang.
+let _searchSeq = 0;
+async function updateSearchResults(query) {
+  const seq = ++_searchSeq;
+  const patients = await api(`/api/pasien?q=${encodeURIComponent(query)}`);
+  if (seq !== _searchSeq) return;   // abaikan hasil fetch yang sudah usang
+  const label = $('search-label');
+  if (label) label.textContent = query ? 'Hasil Pencarian' : 'Daftar Pasien';
+  const list = $('patient-list');
+  if (list) list.innerHTML = renderPatientItems(patients || []);
+}
+
+function renderPatientItems(patients) {
+  if (!patients.length) return `<div class="empty-state"><div class="icon">🔍</div><div class="msg">Pasien tidak ditemukan</div></div>`;
+  return patients.map(p => {
+    const initials = (p.nm_pasien||'?').split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase();
+    return `<div class="patient-item" onclick="openPatient(${JSON.stringify(p).replace(/"/g,'&quot;')})">
+      <div class="patient-avatar">${initials}</div>
+      <div style="flex:1;min-width:0;">
+        <div class="patient-name">${p.nm_pasien}</div>
+        <div class="patient-meta">${p.kd_pasien}${p.telp?' · '+p.telp:''}</div>
+      </div>
+      <span class="patient-arrow">›</span>
+    </div>`;
+  }).join('');
+}
+
+// ── SCREEN: PATIENT ───────────────────────────────────────
+async function openPatient(p) {
+  state.patient = p;
+  state.activeTab = 'semua';
+  await loadAndRenderPatient();
+  show('scr-patient');
+}
+
+async function loadAndRenderPatient() {
+  const p = state.patient;
+  state.photos = await api(`/api/foto-pasien/${p.kd_pasien}`) || [];
+  renderPatientScreen();
+}
+
+function renderPatientScreen() {
+  const p = state.patient;
+  const photos = getFilteredPhotos();
+  const s = $('scr-patient');
+
+  const tabs = ['semua','sebelum','sesudah','progress'];
+  const tabHtml = tabs.map(t => `
+    <button class="tab ${state.activeTab===t?'active':''}" onclick="switchTab('${t}')">
+      ${t==='semua'?'Semua':t.charAt(0).toUpperCase()+t.slice(1)}
+    </button>`).join('');
+
+  // Group photos by date
+  const grouped = {};
+  photos.forEach(f => {
+    const d = f.tanggal || 'Unknown';
+    if (!grouped[d]) grouped[d] = [];
+    grouped[d].push(f);
+  });
+  const dates = Object.keys(grouped).sort().reverse();
+
+  let gridHtml = '';
+  if (!dates.length) {
+    gridHtml = `<div class="empty-state" style="padding-top:60px;">
+      <div class="icon">📷</div>
+      <div class="msg">Belum ada foto${state.activeTab!=='semua'?' '+state.activeTab:''}.<br>Tap + untuk menambahkan.</div>
+    </div>`;
+  } else {
+    dates.forEach(d => {
+      gridHtml += `<div class="date-group-label">${formatDate(d)}</div><div class="foto-grid">`;
+      grouped[d].forEach(f => {
+        const tClass = `tipe-${f.tipe}`;
+        gridHtml += `<div class="foto-card" onclick="openDetail(${f.id})" ${canDeletePhoto(f)?`oncontextmenu="confirmDelete(${f.id});return false;"`:''}>
+
+          <img class="foto-thumb" src="${f.url}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+          <div class="foto-thumb-placeholder" style="display:none;">📷</div>
+          <div class="foto-info">
+            <span class="foto-tipe ${tClass}">${f.tipe}</span>
+            <div class="foto-area">${f.area || 'Umum'}</div>
+            <div class="foto-date">${formatDate(f.tanggal)}</div>
+          </div>
+        </div>`;
+      });
+      gridHtml += `</div>`;
+    });
+  }
+
+  // Check if there's a before+after pair (for compare button)
+  const hasBefore = state.photos.some(f=>f.tipe==='sebelum');
+  const hasAfter  = state.photos.some(f=>f.tipe==='sesudah');
+
+  s.innerHTML = `
+  <div class="hdr">
+    <button class="hdr-back" onclick="backToSearch()">‹</button>
+    <div style="flex:1;min-width:0;">
+      <div class="hdr-title" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${p.nm_pasien}</div>
+      <div class="hdr-sub">${p.kd_pasien} · ${state.photos.length} foto</div>
+    </div>
+    ${hasBefore && hasAfter ? `<button class="hdr-action" onclick="openCompare()">Compare</button>` : ''}
+  </div>
+  <div class="tab-bar">${tabHtml}</div>
+  <div class="body" style="padding-bottom:calc(90px + var(--safe-bot));">${gridHtml}</div>
+  <button class="fab" onclick="openAdd()">+</button>`;
+}
+
+function switchTab(t) {
+  state.activeTab = t;
+  renderPatientScreen();
+}
+function getFilteredPhotos() {
+  if (state.activeTab === 'semua') return state.photos;
+  return state.photos.filter(f => f.tipe === state.activeTab);
+}
+function backToSearch() {
+  stopCamera();
+  goBack('scr-search');
+}
+
+// ── SCREEN: ADD PHOTO ─────────────────────────────────────
+async function openAdd() {
+  state.capturedDataUrl = null;
+  const p = state.patient;
+  const today = todayLocal();
+
+  // Load RM list for this patient — default ke RM PERTAMA hari ini bila ada
+  let rmOpts = '';
+  let todayRmId = null;
+  try {
+    const rms = await api(`/api/rekam-medik/pasien/${p.kd_pasien}`);
+    if (rms?.length) {
+      const todays = rms.filter(r => r.tanggal === today).sort((a,b)=>a.id-b.id);
+      todayRmId = todays.length ? todays[0].id : null;
+      rmOpts += rms.map(r => `<option value="${r.id}"${r.id===todayRmId?' selected':''}>${r.no_rm || 'RM-'+r.id} · ${r.tanggal} · ${r.A_diagnosa||r.S_keluhan||'—'}</option>`).join('');
+    }
+  } catch(e) {}
+  rmOpts = `<option value=""${todayRmId?'':' selected'}>— Tidak Terhubung RM —</option>` + rmOpts;
+
+  const s = $('scr-add');
+  s.innerHTML = `
+  <div class="hdr">
+    <button class="hdr-back" onclick="closeAdd()">‹</button>
+    <div class="hdr-title">Tambah Foto</div>
+  </div>
+  <div class="body" id="add-body">
+    <div class="form-section">
+      <div class="form-label">Jenis Foto</div>
+      <div class="chip-group" id="tipe-chips">
+        <div class="chip sel" data-val="sebelum" onclick="selChip(this,'tipe-chips')">Sebelum</div>
+        <div class="chip" data-val="sesudah" onclick="selChip(this,'tipe-chips')">Sesudah</div>
+        <div class="chip" data-val="progress" onclick="selChip(this,'tipe-chips')">Progress</div>
+      </div>
+
+      <div class="form-label">Area</div>
+      <div class="chip-group" id="area-chips">
+        <div class="chip sel-teal" data-val="wajah" onclick="selChip(this,'area-chips','teal')">Wajah</div>
+        <div class="chip" data-val="leher" onclick="selChip(this,'area-chips','teal')">Leher</div>
+        <div class="chip" data-val="tubuh" onclick="selChip(this,'area-chips','teal')">Tubuh</div>
+        <div class="chip" data-val="tangan" onclick="selChip(this,'area-chips','teal')">Tangan</div>
+        <div class="chip" data-val="kaki" onclick="selChip(this,'area-chips','teal')">Kaki</div>
+        <div class="chip" data-val="lainnya" onclick="selChip(this,'area-chips','teal')">Lainnya</div>
+      </div>
+    </div>
+
+    <!-- CAMERA -->
+    <div class="form-section" style="padding-top:0;">
+      <div class="form-label">Ambil / Pilih Foto</div>
+      <div class="camera-wrap" id="camera-wrap">
+        <div class="cam-placeholder" id="cam-placeholder">
+          <div class="icon">📷</div>
+          <div>Tekan tombol di bawah untuk membuka kamera</div>
+        </div>
+        <video id="camera-video" autoplay playsinline muted style="display:none;"></video>
+        <canvas id="cam-canvas" style="display:none;"></canvas>
+        <img id="preview-img" style="display:none;" alt="preview">
+        <div class="camera-overlay" id="cam-overlay">
+          <button class="cam-btn cam-btn-gallery" id="btn-gallery" onclick="pickGallery()" title="Galeri">🖼️</button>
+          <button class="cam-btn cam-btn-capture" id="btn-capture" onclick="captureOrActivate()">📷</button>
+          <button class="cam-btn cam-btn-flip" id="btn-flip" onclick="flipCamera()" title="Balik Kamera">🔄</button>
+        </div>
+      </div>
+      <input type="file" id="file-inp" accept="image/*" style="display:none;" onchange="fileSelected(this)">
+      <input type="file" id="cam-inp" accept="image/*" capture="environment" style="display:none;" onchange="fileSelected(this)">
+    </div>
+
+    <div class="form-section" style="padding-top:0;">
+      <div class="form-label">Tanggal Foto</div>
+      <input type="date" class="form-input" id="inp-tgl" value="${today}">
+
+      <div class="form-label" style="margin-top:14px;">Hubungkan ke Rekam Medik (opsional)</div>
+      <select class="form-input" id="inp-rm" style="appearance:auto;">
+        ${rmOpts}
+      </select>
+      ${todayRmId
+        ? `<div style="font-size:11px;color:var(--teal);margin-top:6px;">✓ Otomatis terpilih ke rekam medik hari ini.</div>`
+        : `<div style="font-size:11px;color:var(--text3);margin-top:6px;">Belum ada RM hari ini → foto akan otomatis tertaut saat transaksi/RM dibuat.</div>`}
+
+      <div class="form-label" style="margin-top:14px;">Keterangan</div>
+      <textarea class="form-input" id="inp-ket" rows="3" placeholder="Contoh: Pasca laser CO2 sesi 1, perubahan pigmentasi..."></textarea>
+    </div>
+
+    <div style="padding:0 16px 32px;">
+      <button class="btn-full btn-pink" id="btn-save" onclick="savePhoto()">
+        Simpan Foto
+      </button>
+    </div>
+  </div>`;
+
+  show('scr-add');
+  setTimeout(startCamera, 300);
+}
+
+function selChip(el, groupId, variant='') {
+  document.querySelectorAll(`#${groupId} .chip`).forEach(c => {
+    c.classList.remove('sel','sel-teal');
+  });
+  el.classList.add(variant === 'teal' ? 'sel-teal' : 'sel');
+}
+function getChipVal(groupId) {
+  return document.querySelector(`#${groupId} .chip.sel, #${groupId} .chip.sel-teal`)?.dataset.val || '';
+}
+
+async function startCamera() {
+  if (!navigator.mediaDevices?.getUserMedia) return;
+  try {
+    const constraints = { video: { facingMode: state.facingMode, width:{ideal:1280}, height:{ideal:960} } };
+    state.stream = await navigator.mediaDevices.getUserMedia(constraints);
+    const v = $('camera-video');
+    v.srcObject = state.stream;
+    v.style.display = 'block';
+    $('cam-placeholder').style.display = 'none';
+  } catch(e) {
+    // Camera permission denied — show native file input fallback
+    $('cam-placeholder').innerHTML = `<div class="icon">📷</div><div>Ketuk 📷 untuk membuka kamera perangkat</div>`;
+  }
+}
+
+function stopCamera() {
+  state.stream?.getTracks().forEach(t => t.stop());
+  state.stream = null;
+}
+
+function captureOrActivate() {
+  if (state.stream) {
+    // Capture from video
+    const v = $('camera-video');
+    const c = $('cam-canvas');
+    c.width = v.videoWidth || 1280;
+    c.height = v.videoHeight || 960;
+    c.getContext('2d').drawImage(v, 0, 0);
+    state.capturedDataUrl = c.toDataURL('image/jpeg', 0.92);
+    showPreview(state.capturedDataUrl);
+  } else {
+    $('cam-inp').click();
+  }
+}
+
+function pickGallery() {
+  $('file-inp').click();
+}
+
+function flipCamera() {
+  stopCamera();
+  state.facingMode = state.facingMode === 'environment' ? 'user' : 'environment';
+  const v = $('camera-video');
+  v.style.transform = state.facingMode === 'user' ? 'scaleX(-1)' : '';
+  startCamera();
+}
+
+function fileSelected(inp) {
+  const file = inp.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    state.capturedDataUrl = e.target.result;
+    showPreview(state.capturedDataUrl);
+  };
+  reader.readAsDataURL(file);
+  inp.value = '';
+}
+
+function showPreview(dataUrl) {
+  stopCamera();
+  const v = $('camera-video');
+  const img = $('preview-img');
+  const ph  = $('cam-placeholder');
+  if (v) v.style.display = 'none';
+  if (ph) ph.style.display = 'none';
+  if (img) { img.src = dataUrl; img.style.display = 'block'; }
+  const btn = $('btn-capture');
+  if (btn) { btn.textContent = '🔄'; btn.title = 'Ulang'; btn.onclick = retakePhoto; }
+}
+
+function retakePhoto() {
+  state.capturedDataUrl = null;
+  const img = $('preview-img');
+  if (img) img.style.display = 'none';
+  const btn = $('btn-capture');
+  if (btn) { btn.textContent = '📷'; btn.title = ''; btn.onclick = captureOrActivate; }
+  startCamera();
+}
+
+async function savePhoto() {
+  if (!state.capturedDataUrl) { toast('Ambil foto terlebih dahulu!'); return; }
+  const btn = $('btn-save');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Menyimpan...';
+
+  try {
+    // Perkecil gambar dulu agar upload cepat (foto galeri HP bisa belasan MB)
+    const imageData = await compressImage(state.capturedDataUrl, 1600, 0.85);
+    const res = await api('/api/foto-pasien', {
+      method: 'POST',
+      body: {
+        kd_pasien:  state.patient.kd_pasien,
+        tipe:       getChipVal('tipe-chips') || 'sebelum',
+        area:       getChipVal('area-chips') || 'wajah',
+        tanggal:    $('inp-tgl')?.value || todayLocal(),
+        id_rm:      $('inp-rm')?.value || null,
+        keterangan: $('inp-ket')?.value || '',
+        image_data: imageData,
+      }
+    });
+    if (res.ok) {
+      toast('Foto berhasil disimpan!');
+      stopCamera();
+      await loadAndRenderPatient();
+      goBack('scr-patient');
+    } else {
+      toast('Gagal: ' + (res.msg||'Coba lagi'));
+      btn.disabled = false; btn.textContent = 'Simpan Foto';
+    }
+  } catch(e) {
+    toast('Error: ' + e.message);
+    btn.disabled = false; btn.textContent = 'Simpan Foto';
+  }
+}
+
+function closeAdd() {
+  stopCamera();
+  goBack('scr-patient');
+}
+
+// ── SCREEN: DETAIL ────────────────────────────────────────
+function openDetail(fid) {
+  const f = state.photos.find(x => x.id === fid);
+  if (!f) return;
+  state.detailPhoto = f;
+  renderDetail(f);
+  show('scr-detail');
+}
+
+function canDeletePhoto(f) {
+  const role = state.user?.role || '';
+  if (role === 'admin' || role === 'supervisor') return true;
+  // Others: only within 24h of upload
+  if (f.can_delete !== undefined) return !!f.can_delete;
+  if (!f.created_at) return true;
+  try {
+    const age = (Date.now() - new Date(f.created_at.replace(' ','T')).getTime()) / 3600000;
+    return age <= 24;
+  } catch { return true; }
+}
+
+function renderDetail(f) {
+  const tClass = `tipe-${f.tipe}`;
+  const canDel = canDeletePhoto(f);
+  const s = $('scr-detail');
+  s.innerHTML = `
+  <div class="hdr">
+    <button class="hdr-back" onclick="goBack('scr-patient')">‹</button>
+    <div class="hdr-title">Detail Foto</div>
+    ${canDel
+      ? `<button class="hdr-action" style="background:rgba(239,68,68,.25);border-color:rgba(239,68,68,.5);" onclick="confirmDelete(${f.id})">Hapus</button>`
+      : `<span style="font-size:10px;color:rgba(255,255,255,.6);padding:6px 10px;">Hanya admin/supervisor yang dapat menghapus</span>`}
+  </div>
+  <div class="body">
+    <div class="detail-img-wrap">
+      <img id="detail-img" src="${f.url}" alt="foto">
+    </div>
+    <div class="detail-info">
+      <div class="detail-badge-row">
+        <span class="detail-badge ${tClass}" style="background:var(--pink-dim);color:var(--pink);">${f.tipe.toUpperCase()}</span>
+        ${f.area ? `<span class="detail-badge" style="background:rgba(20,184,166,.1);color:var(--teal);">${f.area}</span>` : ''}
+        <span class="detail-badge" style="background:var(--bg);color:var(--text2);">${formatDate(f.tanggal)}</span>
+      </div>
+      ${f.keterangan ? `<p class="detail-keterangan">"${f.keterangan}"</p>` : ''}
+      ${f.no_rm ? `<div class="detail-meta">RM: ${f.no_rm}</div>` : ''}
+      <div class="detail-meta" style="margin-top:4px;">Ditambahkan: ${f.created_at||f.tanggal}</div>
+      ${f.uploaded_by ? `<div class="detail-meta">Oleh: <b>${f.uploaded_by}</b></div>` : ''}
+    </div>
+    <div class="btn-row" style="padding:16px;">
+      <button class="btn-full btn-outline" onclick="openEditSheet(${f.id})">Edit Keterangan</button>
+      ${getSiblingCompareBtn(f)}
+    </div>
+  </div>`;
+}
+
+function getSiblingCompareBtn(f) {
+  const target = f.tipe === 'sebelum' ? 'sesudah' : 'sebelum';
+  const sibling = state.photos.find(x => x.tipe === target && x.area === f.area);
+  if (!sibling) return '';
+  return `<button class="btn-full btn-pink" onclick="openCompareTwo(${f.id},${sibling.id})">Compare ${target}</button>`;
+}
+
+function openEditSheet(fid) {
+  const f = state.photos.find(x => x.id === fid);
+  if (!f) return;
+  const overlay = $('modal-delete');
+  overlay.innerHTML = `
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Edit Keterangan</div>
+    <div style="padding:0 0 12px;">
+      <div class="form-label">Area</div>
+      <div class="chip-group" id="edit-area-chips">
+        ${['wajah','leher','tubuh','tangan','kaki','lainnya'].map(a =>
+          `<div class="chip ${f.area===a?'sel-teal':''}" data-val="${a}" onclick="selChip(this,'edit-area-chips','teal')">${a}</div>`
+        ).join('')}
+      </div>
+      <div class="form-label" style="margin-top:8px;">Keterangan</div>
+      <textarea class="form-input" id="edit-ket" rows="3">${f.keterangan||''}</textarea>
+    </div>
+    <button class="btn-full btn-pink" onclick="saveEdit(${fid})">Simpan</button>
+    <button class="btn-full btn-outline" style="margin-top:10px;" onclick="closeModal()">Batal</button>
+  </div>`;
+  overlay.classList.add('open');
+}
+
+async function saveEdit(fid) {
+  const f = state.photos.find(x => x.id === fid);
+  if (!f) return;
+  const area = getChipVal('edit-area-chips') || f.area;
+  const ket  = $('edit-ket')?.value || '';
+  await api(`/api/foto-pasien/${fid}`, {
+    method: 'PUT',
+    body: { tipe: f.tipe, area, keterangan: ket, tanggal: f.tanggal }
+  });
+  closeModal();
+  toast('Disimpan!');
+  await loadAndRenderPatient();
+  openDetail(fid);
+}
+
+// ── DELETE ────────────────────────────────────────────────
+function confirmDelete(fid) {
+  state.pendingDeleteId = fid;
+  const overlay = $('modal-delete');
+  overlay.innerHTML = `
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Hapus Foto?</div>
+    <p style="text-align:center;font-size:13px;color:var(--text2);margin-bottom:20px;">
+      Foto ini akan dihapus permanen.
+    </p>
+    <button class="btn-full btn-danger" onclick="doDelete()">Hapus</button>
+    <button class="btn-full btn-outline" style="margin-top:10px;" onclick="closeModal()">Batal</button>
+  </div>`;
+  overlay.classList.add('open');
+}
+async function doDelete() {
+  const fid = state.pendingDeleteId;
+  if (!fid) return;
+  await api(`/api/foto-pasien/${fid}`, { method: 'DELETE' });
+  closeModal();
+  toast('Foto dihapus');
+  const wasDetail = $('scr-detail').classList.contains('active');
+  await loadAndRenderPatient();
+  if (wasDetail) goBack('scr-patient');
+}
+
+// ── SCREEN: COMPARE ───────────────────────────────────────
+function openCompare() {
+  // Find the most recent before/after pair
+  const before = state.photos.filter(f=>f.tipe==='sebelum')[0];
+  const after  = state.photos.filter(f=>f.tipe==='sesudah')[0];
+  if (!before || !after) { toast('Butuh minimal 1 foto sebelum dan 1 sesudah'); return; }
+  openCompareTwo(before.id, after.id);
+}
+
+function openCompareTwo(beforeId, afterId) {
+  const before = state.photos.find(f=>f.id===beforeId) || state.photos.find(f=>f.tipe==='sebelum');
+  const after  = state.photos.find(f=>f.id===afterId)  || state.photos.find(f=>f.tipe==='sesudah');
+  if (!before || !after) return;
+  state.comparePhotos = { before, after };
+  renderCompare(before, after);
+  show('scr-compare');
+}
+
+function renderCompare(before, after) {
+  const s = $('scr-compare');
+  s.innerHTML = `
+  <div class="hdr">
+    <button class="hdr-back" onclick="goBack('scr-patient')">‹</button>
+    <div class="hdr-title">Perbandingan Before/After</div>
+  </div>
+  <div class="compare-labels">
+    <div class="compare-label before">Sebelum</div>
+    <div class="compare-label after">Sesudah</div>
+  </div>
+  <div class="compare-outer" id="cmp-outer" style="flex:1;">
+    <img class="compare-img" id="cmp-after" src="${after.url}" alt="sesudah">
+    <div class="compare-clip" id="cmp-clip" style="width:50%;">
+      <img id="cmp-before" src="${before.url}" alt="sebelum">
+    </div>
+    <div class="compare-handle-line" id="cmp-line" style="left:50%;"></div>
+    <div class="compare-handle-circle" id="cmp-handle" style="left:50%;">◁▷</div>
+    <div class="compare-hint" id="cmp-hint">Geser untuk membandingkan</div>
+  </div>
+  <div class="compare-dates">
+    <div class="compare-date">📅 ${formatDate(before.tanggal)}<br>${before.area||'—'}</div>
+    <div class="compare-date">📅 ${formatDate(after.tanggal)}<br>${after.area||'—'}</div>
+  </div>
+  <div style="padding:14px 16px;background:var(--card);">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      <button class="btn-full btn-outline" style="font-size:12px;" onclick="cyclePair('sebelum')">Ganti Sebelum</button>
+      <button class="btn-full btn-outline" style="font-size:12px;" onclick="cyclePair('sesudah')">Ganti Sesudah</button>
+    </div>
+  </div>`;
+
+  requestAnimationFrame(() => initSlider());
+}
+
+function initSlider() {
+  const outer  = $('cmp-outer');
+  const clip   = $('cmp-clip');
+  const line   = $('cmp-line');
+  const handle = $('cmp-handle');
+  const hint   = $('cmp-hint');
+  if (!outer || !handle) return;
+
+  // Set clip image width to match container
+  const beforeImg = $('cmp-before');
+  if (beforeImg) {
+    beforeImg.style.width = outer.offsetWidth + 'px';
+  }
+
+  let dragging = false;
+  function setPos(clientX) {
+    const rect = outer.getBoundingClientRect();
+    const pct  = Math.max(2, Math.min(98, (clientX - rect.left) / rect.width * 100));
+    clip.style.width = pct + '%';
+    line.style.left  = pct + '%';
+    handle.style.left = pct + '%';
+    if (hint) hint.style.display = 'none';
+    // Keep before image full-width inside clip
+    if (beforeImg) beforeImg.style.width = rect.width + 'px';
+  }
+
+  handle.addEventListener('mousedown',  () => dragging = true);
+  document.addEventListener('mouseup',  () => dragging = false);
+  document.addEventListener('mousemove', e => { if (dragging) setPos(e.clientX); });
+  outer.addEventListener('click', e => setPos(e.clientX));
+
+  handle.addEventListener('touchstart',  e => { dragging = true; e.preventDefault(); }, {passive:false});
+  document.addEventListener('touchend',  () => dragging = false);
+  document.addEventListener('touchmove', e => {
+    if (dragging) { setPos(e.touches[0].clientX); e.preventDefault(); }
+  }, {passive:false});
+}
+
+// Cycle through available before/after photos
+let _cycleIdx = { sebelum: 0, sesudah: 0 };
+function cyclePair(tipe) {
+  const pool = state.photos.filter(f => f.tipe === tipe);
+  if (!pool.length) return;
+  _cycleIdx[tipe] = (_cycleIdx[tipe] + 1) % pool.length;
+  const picked = pool[_cycleIdx[tipe]];
+  state.comparePhotos[tipe === 'sebelum' ? 'before' : 'after'] = picked;
+  const { before, after } = state.comparePhotos;
+  renderCompare(before, after);
+}
+
+// ── UTILS ─────────────────────────────────────────────────
+function formatDate(d) {
+  if (!d) return '—';
+  try {
+    return new Date(d + 'T00:00:00').toLocaleDateString('id-ID', {day:'numeric',month:'short',year:'numeric'});
+  } catch { return d; }
+}
+function fmtRp(n) {
+  return 'Rp ' + (Math.round(parseFloat(n) || 0)).toLocaleString('id-ID');
+}
+
+// Kompres / perkecil gambar sebelum upload agar tidak lambat
+function compressImage(dataUrl, maxDim = 1600, quality = 0.85) {
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      let { width, height } = img;
+      if (width > maxDim || height > maxDim) {
+        if (width >= height) { height = Math.round(height * maxDim / width); width = maxDim; }
+        else                 { width  = Math.round(width  * maxDim / height); height = maxDim; }
+      }
+      const c = document.createElement('canvas');
+      c.width = width; c.height = height;
+      c.getContext('2d').drawImage(img, 0, 0, width, height);
+      try { resolve(c.toDataURL('image/jpeg', quality)); }
+      catch { resolve(dataUrl); }
+    };
+    img.onerror = () => resolve(dataUrl);   // gagal proses → pakai aslinya
+    img.src = dataUrl;
+  });
+}
+
+// ── BOTTOM NAV (perawat/beautician) ───────────────────────
+function updateBottomNav() {
+  const nav = $('bottom-nav');
+  if (!nav) return;
+  const active   = document.querySelector('.screen.active')?.id;
+  const isHome    = active === 'scr-search' || active === 'scr-komisi' || active === 'scr-kit' || active === 'scr-serah';
+  const loggedIn  = !!state.token && $('login-overlay')?.classList.contains('hidden');
+  nav.style.display = (isHome && loggedIn) ? 'flex' : 'none';
+  nav.querySelectorAll('.bn-item').forEach(b =>
+    b.classList.toggle('active', b.dataset.scr === active));
+}
+
+function navHome(screenId) {
+  const current = document.querySelector('.screen.active')?.id;
+  if (current === screenId) return;
+  if (screenId === 'scr-komisi') renderKomisi();
+  else if (screenId === 'scr-kit') renderKit();
+  else if (screenId === 'scr-serah') renderSerah();
+  else if (screenId === 'scr-search' && !$('scr-search').innerHTML.trim()) renderSearch();
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active','prev'));
+  $(screenId).classList.add('active');
+  updateBottomNav();
+}
+
+// ── SCREEN: KIT SAYA ──────────────────────────────────────
+function _mqf(n){ n=parseFloat(n)||0; return Number.isInteger(n)?n:(''+n).replace('.',','); }
+async function renderKit() {
+  const s = $('scr-kit');
+  const kd = state.user?.kd_karyawan;
+  s.innerHTML = `
+    <div class="hdr"><div class="hdr-title">🧰 Kit Saya</div>
+      <button class="hdr-action" onclick="openKitReq()">＋ Minta Isi</button></div>
+    <div class="body" id="kit-body"><div style="padding:40px;text-align:center;color:var(--text3)">Memuat...</div></div>`;
+  if (!kd) {
+    $('kit-body').innerHTML = `<div class="empty-state"><div class="icon">🧰</div><div class="msg">Akun ini belum tertaut ke data karyawan.<br>Hubungi admin.</div></div>`;
+    return;
+  }
+  const [data, reqs, usage] = await Promise.all([
+    api(`/api/kit/${encodeURIComponent(kd)}`),
+    api(`/api/kit/request?kd_karyawan=${encodeURIComponent(kd)}`),
+    api(`/api/kit/${encodeURIComponent(kd)}/log?jenis=pakai_treatment&limit=30`),
+  ]);
+  const items = (data && data.items) || [];
+  // Satukan baris exp berbeda utk barang yg sama jadi 1 kartu (barang bisa punya banyak batch/exp)
+  const groupMap = new Map();
+  for (const it of items) {
+    let g = groupMap.get(it.kd_barang);
+    if (!g) {
+      g = { kd_barang: it.kd_barang, nm_barang: it.nm_barang, satuan: it.satuan,
+            total: 0, reserved_serah: it.reserved_serah || 0,
+            reserved_pelaksana: it.reserved_pelaksana || '', batches: [] };
+      groupMap.set(it.kd_barang, g);
+    }
+    g.total += (parseFloat(it.qty_sisa) || 0);
+    g.batches.push({ exp: it.exp, qty_sisa: it.qty_sisa });
+  }
+  const groups = [...groupMap.values()].sort((a,b)=>{
+    const am = a.total < 0, bm = b.total < 0;
+    if (am !== bm) return am ? -1 : 1;
+    return (a.nm_barang||a.kd_barang).localeCompare(b.nm_barang||b.kd_barang);
+  });
+  for (const g of groups) g.batches.sort((x,y)=>(x.exp||'9999').localeCompare(y.exp||'9999'));
+  const nMinus = groups.filter(g=>g.total<0).length;
+  const nPendingSerah = data?.pending_serah_count || 0;
+  const body = $('kit-body');
+  body.innerHTML = `
+    ${items.length ? `
+    <div style="padding:14px 16px 4px;display:flex;gap:10px;flex-wrap:wrap">
+      <div style="flex:1;min-width:100px;background:var(--card);border-radius:16px;padding:14px 16px;box-shadow:var(--shadow-card)">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:700">Jenis Barang</div>
+        <div style="font-size:24px;font-weight:800;margin-top:2px">${groups.length}</div>
+      </div>
+      <div style="flex:1;min-width:100px;background:${nMinus?'var(--pink-dim)':'var(--card)'};border-radius:16px;padding:14px 16px;box-shadow:var(--shadow-card)">
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;font-weight:700">Stok Minus</div>
+        <div style="font-size:24px;font-weight:800;margin-top:2px;color:${nMinus?'var(--danger)':'var(--text)'}">${nMinus}</div>
+      </div>
+      ${nPendingSerah ? `
+      <div style="flex:1;min-width:100px;background:rgba(224,168,92,.15);border-radius:16px;padding:14px 16px;box-shadow:var(--shadow-card);cursor:pointer" onclick="navHome('scr-serah')">
+        <div style="font-size:11px;color:var(--warn);text-transform:uppercase;letter-spacing:.5px;font-weight:700">🔑 Perlu Diserahkan</div>
+        <div style="font-size:24px;font-weight:800;margin-top:2px;color:var(--warn)">${nPendingSerah}</div>
+      </div>` : ''}
+    </div>
+    <div style="padding:8px 16px 0">
+      ${groups.map(g=>{
+        const reserved = g.reserved_serah || 0;
+        const multiBatch = g.batches.length > 1;
+        const kdEsc = g.kd_barang.replace(/'/g,"\\'");
+        const nmEsc = (g.nm_barang||g.kd_barang).replace(/'/g,"\\'");
+        const satEsc = (g.satuan||'').replace(/'/g,"\\'");
+        return `
+        <div style="background:var(--card);border-radius:16px;padding:13px 15px;margin-bottom:10px;box-shadow:var(--shadow-card)${g.total<0?';border:1px solid var(--danger)':''}">
+          <div style="display:flex;align-items:center;gap:12px;cursor:pointer" onclick="kitShowRiwayat('${kdEsc}','${nmEsc}','${satEsc}')">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${g.nm_barang||g.kd_barang}</div>
+              <div style="font-size:11px;color:var(--text3)">${g.kd_barang}${multiBatch?' · '+g.batches.length+' batch exp':(g.batches[0].exp?' · exp '+g.batches[0].exp:'')}</div>
+              ${reserved>0?`<div style="font-size:10.5px;color:var(--warn);margin-top:2px;">🔒 ${_mqf(reserved)} dipesan (serah-terima blm selesai)${g.reserved_pelaksana?` — utk ${g.reserved_pelaksana}`:''}</div>`:''}
+            </div>
+            <div style="text-align:right">
+              <div style="font-size:18px;font-weight:800;color:${g.total<0?'var(--danger)':'var(--text)'}">${_mqf(g.total)}</div>
+              <div style="font-size:10px;color:var(--text3)">${g.satuan||''}</div>
+              <div style="font-size:9px;color:var(--text3);margin-top:2px;">Riwayat ›</div>
+            </div>
+          </div>
+          ${multiBatch ? `
+          <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:9px;padding-top:9px;border-top:1px dashed var(--border,rgba(128,128,128,.25))">
+            ${g.batches.map(b=>`<div style="font-size:10.5px;background:rgba(128,128,128,.12);border-radius:8px;padding:3px 8px;color:${b.qty_sisa<0?'var(--danger)':'var(--text2)'}">${b.exp?'exp '+b.exp:'tanpa exp'} · ${_mqf(b.qty_sisa)}</div>`).join('')}
+          </div>` : ''}
+        </div>`;
+      }).join('')}
+    </div>`
+    : `<div class="empty-state" style="padding:36px 24px"><div class="icon">🧰</div><div class="msg">Kit kamu masih kosong.<br>Tekan <b>＋ Minta Isi</b> untuk mengajukan.</div></div>`}
+    ${_kitPakaiSection(usage)}
+    ${_kitReqSection(reqs)}
+    <div style="text-align:center;font-size:9px;color:var(--text3);letter-spacing:1.5px;padding:18px 0 4px">copyright by UCHAHUNT &mdash; 2026</div>
+    <div style="height:90px"></div>`;
+}
+
+function _kitPakaiSection(rows) {
+  if (!rows || !rows.length) return '';
+  return `<div style="padding:6px 16px 0">
+    <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin:12px 0 8px">Pemakaian Bahan · untuk pasien</div>
+    ${rows.slice(0,30).map(r=>{
+      const viaKunci = !!r.via_serah_terima;
+      return `
+      <div style="display:flex;align-items:center;gap:10px;background:var(--card);border-radius:14px;padding:11px 14px;margin-bottom:8px;box-shadow:var(--shadow-card)${viaKunci?';border-left:3px solid var(--pink)':''}">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.nm_barang||r.kd_barang}${r.nm_pelayanan?' · '+r.nm_pelayanan:''}</div>
+          <div style="font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">👤 ${r.nm_pasien||r.kd_pasien||'—'}${r.ref?' · '+r.ref:''}</div>
+          ${viaKunci
+            ? `<div style="font-size:10.5px;color:var(--pink);margin-top:2px;">🔑 Bareng ${r.st_nm_pelaksana||r.operator||'perawat lain'} (bahan kunci)</div>`
+            : (r.operator ? `<div style="font-size:10.5px;color:var(--text3);margin-top:2px;">Treatment sendiri · oleh ${r.operator}</div>` : '')}
+        </div>
+        <div style="text-align:right;flex-shrink:0">
+          <div style="font-size:14px;font-weight:800;color:var(--danger)">${_mqf(r.qty)}</div>
+          <div style="font-size:10px;color:var(--text3)">${(r.tanggal||'').slice(0,16).replace('T',' ')}</div>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+function _kitReqSection(reqs) {
+  if (!reqs || !reqs.length) return '';
+  const lbl = {pending:['Menunggu','var(--warn)'], approved:['Disetujui','var(--success)'], rejected:['Ditolak','var(--danger)']};
+  return `<div style="padding:6px 16px 0">
+    <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin:10px 0 8px">Permintaan Saya</div>
+    ${reqs.slice(0,10).map(r=>{
+      const L = lbl[r.status] || [r.status,'var(--text3)'];
+      return `<div style="display:flex;align-items:center;gap:10px;background:var(--card);border-radius:14px;padding:11px 14px;margin-bottom:8px;box-shadow:var(--shadow-card)">
+        <div style="flex:1;min-width:0">
+          <div style="font-size:13px;font-weight:600">${r.no_request} · ${r.n_item} barang</div>
+          <div style="font-size:11px;color:var(--text3)">${(r.created_at||'').slice(0,16).replace('T',' ')}${r.status==='rejected'&&r.alasan?` · ${r.alasan}`:''}</div>
+        </div>
+        <span style="font-size:10px;font-weight:700;padding:4px 11px;border-radius:20px;background:${L[1]}22;color:${L[1]}">${L[0]}</span>
+        ${r.status==='pending'?`<button onclick="kitReqCancel(${r.id})" style="background:none;border:none;color:var(--danger);font-size:17px;cursor:pointer;line-height:1">✕</button>`:''}
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+// ── Riwayat Kartu Stok per barang (drill-down dari list Kit Saya) ──
+// Ditampilkan sbg list ringkas bertumpuk (bukan tabel lebar) — lebih pas utk layar HP
+// drpd meniru persis tabel Kartu Stok Induk di desktop.
+const _kitJenisLbl = {
+  isi_ulang:        ['📥 Isi Ulang',    'var(--success)'],
+  pakai_treatment:  ['📤 Pakai',        'var(--danger)'],
+  retur_treatment:  ['↩️ Retur',        'var(--lav)'],
+  koreksi:          ['🔧 Koreksi',      'var(--text3)'],
+};
+async function kitShowRiwayat(kdBarang, nmBarang, satuan) {
+  const kd = state.user?.kd_karyawan;
+  if (!kd) return;
+  const overlay = $('modal-delete');
+  overlay.innerHTML = `
+  <div class="modal-sheet" style="max-height:82vh;display:flex;flex-direction:column;">
+    <div class="modal-handle"></div>
+    <div class="modal-title">${nmBarang}</div>
+    <div style="text-align:center;font-size:11px;color:var(--text3);margin-bottom:10px;">${kdBarang}</div>
+    <div id="kit-riwayat-list" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:6px;">
+      <div style="text-align:center;padding:24px;color:var(--text3);">Memuat...</div>
+    </div>
+    <button class="btn-full btn-outline" style="margin-top:10px;" onclick="closeModal()">Tutup</button>
+  </div>`;
+  overlay.classList.add('open');
+
+  const rows = await api(`/api/kit/${encodeURIComponent(kd)}/log?kd_barang=${encodeURIComponent(kdBarang)}&limit=100`) || [];
+  const list = $('kit-riwayat-list');
+  if (!list) return;
+  if (!rows.length) {
+    list.innerHTML = `<div class="empty-state" style="padding:24px;"><div class="icon">📋</div><div class="msg">Belum ada riwayat utk barang ini.</div></div>`;
+    return;
+  }
+  list.innerHTML = rows.map(r => {
+    const L = _kitJenisLbl[r.jenis] || [r.jenis, 'var(--text3)'];
+    const masuk = (parseFloat(r.qty)||0) > 0;
+    const konteks = r.jenis === 'pakai_treatment'
+      ? (r.via_serah_terima ? `🔑 Bareng ${r.st_nm_pelaksana||'—'} (bahan kunci)` : `${r.nm_pelayanan||''}${r.nm_pasien?' · 👤 '+r.nm_pasien:''}`)
+      : (r.ref || '');
+    return `
+    <div style="background:var(--card);border-radius:14px;padding:11px 14px;margin-bottom:8px;box-shadow:var(--shadow-card);">
+      <div style="display:flex;align-items:center;justify-content:space-between;">
+        <span style="font-size:11px;font-weight:700;color:${L[1]}">${L[0]}</span>
+        <span style="font-size:10px;color:var(--text3)">${(r.tanggal||'').slice(0,16).replace('T',' ')}</span>
+      </div>
+      ${konteks ? `<div style="font-size:12px;color:var(--text2);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${konteks}</div>` : ''}
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-top:4px;">
+        <span style="font-size:14px;font-weight:800;color:${masuk?'var(--success)':'var(--danger)'}">${masuk?'+':''}${_mqf(r.qty)} ${satuan||''}</span>
+        <span style="font-size:11px;color:var(--text3);">saldo ${_mqf(r.saldo)}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function kitReqCancel(rid) {
+  const res = await api(`/api/kit/request/${rid}`, {method:'DELETE'});
+  if (res.ok === false) { toast(res.msg||'Gagal'); return; }
+  toast('Permintaan dibatalkan');
+  renderKit();
+}
+
+// ── SCREEN: SERAH KUNCI (QR handshake bahan kunci) ─────────
+async function renderSerah() {
+  const s = $('scr-serah');
+  const kd = state.user?.kd_karyawan;
+  s.innerHTML = `
+    <div class="hdr"><div class="hdr-title">🔑 Serah Kunci</div></div>
+    <div class="body" id="serah-body"><div style="padding:40px;text-align:center;color:var(--text3)">Memuat...</div></div>`;
+  if (!kd) {
+    $('serah-body').innerHTML = `<div class="empty-state"><div class="icon">🔑</div><div class="msg">Akun ini belum tertaut ke data karyawan.<br>Hubungi admin.</div></div>`;
+    return;
+  }
+  const pending = await api(`/api/serah-terima/pending?kd_karyawan=${encodeURIComponent(kd)}&peran=kunci`) || [];
+  const terlewat = await api(`/api/serah-terima/pending?kd_karyawan=${encodeURIComponent(kd)}&peran=terlewat`) || [];
+  // Kelompokkan per (no_faktur, kd_pelaksana) — 1 kelompok = 1 QR (serah_terima_qr backend juga per kombinasi ini).
+  const groups = {};
+  for (const r of pending) {
+    // 1 kelompok = 1 treatment (no_faktur+kd_pelaksana+kd_pelayanan) — komisi_k_estimasi
+    // dihitung per TREATMENT (dari total komisi pelaksana yg pending), BUKAN per baris
+    // bahan, supaya tidak dobel-hitung kalau 1 treatment punya >1 bahan kunci.
+    const key = r.no_faktur + '|' + r.kd_pelaksana + '|' + r.kd_pelayanan;
+    if (!groups[key]) groups[key] = { no_faktur: r.no_faktur, kd_pelaksana: r.kd_pelaksana, nm_pelaksana: r.nm_pelaksana, komisi_k_estimasi: r.komisi_k_estimasi||0, items: [] };
+    groups[key].items.push(r);
+  }
+  const groupList = Object.values(groups);
+
+  const body = $('serah-body');
+  body.innerHTML = `
+    <div style="padding:14px 16px 4px">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Perlu Diserahkan (bahan yang saya pegang)</div>
+      ${!groupList.length ? `<div class="empty-state" style="padding:30px 10px"><div class="icon">🔑</div><div class="msg">Tidak ada bahan kunci yang perlu diserahkan saat ini.</div></div>` :
+        groupList.map(g => `
+        <div style="background:var(--card);border-radius:16px;padding:13px 15px;margin-bottom:10px;box-shadow:var(--shadow-card)">
+          <div style="font-size:13px;font-weight:700">${g.no_faktur}</div>
+          <div style="font-size:12px;color:var(--text3);margin-bottom:8px">Ke: ${g.nm_pelaksana||g.kd_pelaksana}</div>
+          ${g.items.map(it=>`<div style="font-size:12px;color:var(--text2);margin-bottom:2px">• ${it.nm_barang} — ${_mqf(it.qty)} ${it.satuan||''}</div>`).join('')}
+          ${g.komisi_k_estimasi > 0 ? `
+          <div style="background:rgba(224,168,92,.12);border-radius:10px;padding:8px 10px;margin-top:8px">
+            <div style="font-size:12px;font-weight:700;color:var(--warn)">💰 Estimasi komisi Anda: ${fmtRp(g.komisi_k_estimasi)}</div>
+            <div style="font-size:10.5px;color:var(--text3);margin-top:1px">Masih dibekukan — cair otomatis setelah serah-terima ini selesai</div>
+          </div>` : ''}
+          <button class="btn-full btn-pink" style="margin-top:10px" onclick="serahShowQR('${g.no_faktur}','${g.kd_pelaksana}')">📱 Tampilkan QR</button>
+        </div>`).join('')}
+    </div>
+    ${terlewat.length ? `
+    <div style="padding:20px 16px 4px">
+      <div style="font-size:11px;font-weight:700;color:var(--warn);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">⚠️ Bahan Kunci Terlewat (saya sbg pelaksana)</div>
+      ${terlewat.map(t => `
+      <div style="background:var(--card);border-radius:16px;padding:13px 15px;margin-bottom:8px;box-shadow:var(--shadow-card);border-left:3px solid var(--warn)">
+        <div style="font-size:13px;font-weight:700">${t.nm_pelayanan||t.kd_pelayanan} · ${t.no_faktur}</div>
+        <div style="font-size:12px;color:var(--text2);margin:4px 0">${t.nm_barang} — ${_mqf(t.qty)} ${t.satuan||''}</div>
+        <div style="font-size:11px;color:var(--text3)">Perawat K belum dipilih kasir saat transaksi ini — bahan tidak terpotong dari kit siapa pun. Kalau bahan ini memang benar dipakai dari kit orang lain, konfirmasi manual ke admin/supervisor.</div>
+      </div>`).join('')}
+    </div>` : ''}
+    <div style="padding:20px 16px 4px">
+      <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Terima Bahan (sebagai pelaksana)</div>
+      <div style="background:var(--card);border-radius:16px;padding:13px 15px;box-shadow:var(--shadow-card)">
+        <div style="font-size:12px;color:var(--text3);margin-bottom:8px">Scan QR dari perawat pemegang bahan (kamera HP), atau tempel/ketik kode manual di bawah:</div>
+        <input class="form-input" id="serah-kode" placeholder="Kode serah-terima..." autocomplete="off">
+        <button class="btn-full btn-pink" style="margin-top:10px" onclick="serahKonfirmasi()">✓ Konfirmasi Terima</button>
+      </div>
+    </div>
+    <div style="text-align:center;font-size:9px;color:var(--text3);letter-spacing:1.5px;padding:18px 0 4px">copyright by UCHAHUNT &mdash; 2026</div>
+    <div style="height:90px"></div>`;
+
+  // Dibuka lewat link QR (?serah=token&kd=...) → kode dipre-fill, tinggal ditekan Konfirmasi.
+  const params = new URLSearchParams(location.search);
+  const tok = params.get('serah');
+  if (tok) {
+    const kodeInp = $('serah-kode');
+    if (kodeInp) kodeInp.value = tok;
+    const kdTarget = params.get('kd');
+    if (kdTarget && kdTarget !== kd) {
+      toast('Kode ini untuk pelaksana lain — login sbg karyawan yang dituju');
+    }
+  }
+}
+
+async function serahShowQR(noFaktur, kdPelaksana) {
+  const res = await api('/api/serah-terima/qr', {method:'POST', body:{
+    no_faktur: noFaktur, kd_karyawan: state.user.kd_karyawan, kd_pelaksana: kdPelaksana
+  }});
+  if (res.ok === false) { toast(res.msg || 'Gagal membuat QR'); return; }
+  const url = location.origin + '/mobile?serah=' + encodeURIComponent(res.token) + '&kd=' + encodeURIComponent(kdPelaksana);
+  const overlay = $('modal-delete');
+  overlay.innerHTML = `
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="modal-title">QR Serah-Terima</div>
+    <div style="text-align:center;font-size:12px;color:var(--text3);margin-bottom:12px">${res.count} bahan · berlaku 5 menit</div>
+    <div style="display:flex;justify-content:center;margin-bottom:14px"><div id="serah-qr-box" style="background:#fff;padding:12px;border-radius:16px"></div></div>
+    <div style="text-align:center;font-size:11px;color:var(--text3);margin-bottom:4px">Atau kode manual:</div>
+    <div style="text-align:center;font-family:monospace;font-size:11px;color:var(--text2);word-break:break-all;padding:0 20px;margin-bottom:16px" id="serah-qr-token">${res.token}</div>
+    <button class="btn-full btn-outline" onclick="closeModal()">Tutup</button>
+  </div>`;
+  overlay.classList.add('open');
+  const box = document.getElementById('serah-qr-box');
+  if (box && window.QRCode) {
+    new QRCode(box, { text: url, width: 200, height: 200, colorDark: '#463a2c', colorLight: '#ffffff', correctLevel: QRCode.CorrectLevel.M });
+  }
+}
+
+async function serahKonfirmasi() {
+  const kode = ($('serah-kode')?.value || '').trim();
+  if (!kode) { toast('Masukkan kode serah-terima dulu'); return; }
+  const res = await api('/api/serah-terima/scan', {method:'POST', body:{token: kode}});
+  if (res.ok === false) { toast(res.msg || 'Gagal konfirmasi'); return; }
+  toast(`✓ ${res.count} bahan berhasil diterima`);
+  renderSerah();
+}
+
+// ── Layar: Minta Isi Ulang Kit ──
+let _kitReqItems = [];
+let _kitReqTimer = null;
+function openKitReq() {
+  if (!state.user?.kd_karyawan) { toast('Akun belum tertaut ke karyawan'); return; }
+  _kitReqItems = [];
+  $('scr-kit-req').innerHTML = `
+    <div class="hdr"><button class="hdr-back" onclick="navHome('scr-kit')">‹</button><div class="hdr-title">Minta Isi Ulang Kit</div></div>
+    <div class="body" style="padding-bottom:40px">
+      <div class="form-section">
+        <div class="form-label">Cari Barang</div>
+        <div style="position:relative">
+          <input class="form-input" id="kreq-search" placeholder="Ketik nama / kode barang..." autocomplete="off" oninput="kitReqSearch(this.value)">
+          <div id="kreq-sug" style="position:absolute;top:calc(100% + 4px);left:0;right:0;z-index:30;background:var(--card);border-radius:16px;box-shadow:var(--shadow-soft);max-height:240px;overflow-y:auto;display:none"></div>
+        </div>
+      </div>
+      <div id="kreq-items" style="padding:0 16px"></div>
+      <div class="form-section">
+        <div class="form-label">Catatan (opsional)</div>
+        <textarea class="form-input" id="kreq-note" rows="2" placeholder="mis. untuk treatment minggu ini"></textarea>
+      </div>
+      <div style="padding:0 16px 40px">
+        <button class="btn-full btn-pink" onclick="kitReqSubmit()">Kirim Permintaan</button>
+      </div>
+    </div>`;
+  show('scr-kit-req');
+  kitReqRenderItems();
+}
+function kitReqSearch(q) {
+  clearTimeout(_kitReqTimer);
+  const box = $('kreq-sug'); if (!box) return;
+  if (!q || q.length < 1) { box.style.display='none'; return; }
+  _kitReqTimer = setTimeout(async () => {
+    const rows = await api(`/api/barang?q=${encodeURIComponent(q)}`) || [];
+    if (!rows.length) { box.innerHTML = `<div style="padding:12px 14px;color:var(--text3);font-size:13px">Tidak ditemukan</div>`; box.style.display='block'; return; }
+    box.innerHTML = rows.slice(0,15).map(b=>`<div style="padding:11px 14px;border-bottom:1px solid var(--border);cursor:pointer" onclick="kitReqAddItem('${b.kd_barang}','${(b.nm_barang||'').replace(/'/g,'')}','${b.satuan||''}')">
+      <div style="font-size:13px;font-weight:600">${b.nm_barang}</div>
+      <div style="font-size:11px;color:var(--text3)">${b.kd_barang}${b.satuan?' · '+b.satuan:''}</div></div>`).join('');
+    box.style.display='block';
+  }, 200);
+}
+function kitReqAddItem(kd, nm, sat) {
+  if (!_kitReqItems.find(x=>x.kd_barang===kd)) _kitReqItems.push({kd_barang:kd, nm_barang:nm, satuan:sat, qty:1});
+  const s=$('kreq-search'); if(s) s.value='';
+  const box=$('kreq-sug'); if(box) box.style.display='none';
+  kitReqRenderItems();
+}
+function kitReqRenderItems() {
+  const el = $('kreq-items'); if (!el) return;
+  if (!_kitReqItems.length) { el.innerHTML = `<div style="color:var(--text3);font-size:12px;text-align:center;padding:14px">Belum ada barang dipilih.</div>`; return; }
+  el.innerHTML = _kitReqItems.map((it,i)=>`
+    <div style="display:flex;align-items:center;gap:10px;background:var(--card);border-radius:14px;padding:10px 12px;margin-bottom:8px;box-shadow:var(--shadow-card)">
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${it.nm_barang}</div>
+        <div style="font-size:10px;color:var(--text3)">${it.kd_barang}</div>
+      </div>
+      <input type="number" inputmode="decimal" min="0" step="any" value="${it.qty}" onchange="_kitReqItems[${i}].qty=parseFloat(this.value)||0"
+        style="width:64px;padding:8px;text-align:center;border:1px solid var(--border);border-radius:10px;font-size:14px;background:var(--card)">
+      <span style="font-size:11px;color:var(--text3);min-width:28px">${it.satuan||''}</span>
+      <button onclick="_kitReqItems.splice(${i},1);kitReqRenderItems()" style="background:none;border:none;color:var(--danger);font-size:17px;cursor:pointer">✕</button>
+    </div>`).join('');
+}
+async function kitReqSubmit() {
+  const items = _kitReqItems.filter(x=>x.qty>0);
+  if (!items.length) { toast('Pilih minimal 1 barang'); return; }
+  const res = await api('/api/kit/request', {method:'POST', body:{
+    kd_karyawan: state.user?.kd_karyawan || '',   // pengaman bila sesi server sempat basi
+    items, catatan: $('kreq-note')?.value || ''
+  }});
+  if (res.ok === false) { toast(res.msg||'Gagal mengirim'); return; }
+  toast('Permintaan terkirim ke admin');
+  navHome('scr-kit');
+}
+
+// ── SCREEN: KOMISI ────────────────────────────────────────
+function monthStartISO() {
+  const d = new Date();
+  return localDate(new Date(d.getFullYear(), d.getMonth(), 1));
+}
+
+function renderKomisi() {
+  const s  = $('scr-komisi');
+  const kd = state.user?.kd_karyawan;
+  const dari   = state._komisiDari   || monthStartISO();
+  const sampai = state._komisiSampai || todayLocal();
+  state._komisiDari = dari; state._komisiSampai = sampai;
+
+  s.innerHTML = `
+  <div class="hdr">
+    <div style="flex:1;">
+      <div class="hdr-title">💰 Komisi Saya</div>
+      <div class="hdr-sub">${state.user?.nama || 'Rachel Clinic'}</div>
+    </div>
+    <button class="hdr-action" onclick="doMobileLogout()" style="font-size:11px;opacity:.85">Keluar</button>
+  </div>
+  <div class="body" style="padding-bottom:calc(80px + var(--safe-bot));">
+    ${ kd ? `
+    <div class="komisi-filter">
+      <div style="display:flex;gap:8px;">
+        <div style="flex:1;">
+          <div class="form-label">Dari</div>
+          <input type="date" class="form-input" id="k-dari" value="${dari}">
+        </div>
+        <div style="flex:1;">
+          <div class="form-label">Sampai</div>
+          <input type="date" class="form-input" id="k-sampai" value="${sampai}">
+        </div>
+      </div>
+      <button class="btn-full btn-pink" style="margin-top:12px;" onclick="loadKomisi()">Lihat Komisi</button>
+    </div>
+    <div id="komisi-result"></div>
+    ` : `
+    <div class="empty-state" style="padding-top:60px;">
+      <div class="icon">🔒</div>
+      <div class="msg">Akun Anda belum terhubung ke data karyawan.<br>Hubungi admin untuk menautkan.</div>
+    </div>` }
+    <div style="text-align:center;font-size:9px;color:var(--text3);letter-spacing:1.5px;padding:22px 0 6px">copyright by UCHAHUNT &mdash; 2026</div>
+  </div>`;
+
+  if (kd) loadKomisi();
+}
+
+async function loadKomisi() {
+  const kd = state.user?.kd_karyawan;
+  if (!kd) return;
+  const dari   = $('k-dari')?.value   || state._komisiDari;
+  const sampai = $('k-sampai')?.value || state._komisiSampai;
+  state._komisiDari = dari; state._komisiSampai = sampai;
+  const box = $('komisi-result');
+  if (box) box.innerHTML = `<div class="empty-state" style="padding-top:30px;"><div class="icon">⏳</div><div class="msg">Memuat...</div></div>`;
+  const rows = await api(`/api/laporan/komisi-detail/${encodeURIComponent(kd)}?dari=${dari}&sampai=${sampai}`) || [];
+  renderKomisiResult(Array.isArray(rows) ? rows : []);
+}
+
+function renderKomisiResult(rows) {
+  const box = $('komisi-result');
+  if (!box) return;
+  // HANYA status 'released' yg dihitung ke total — 'pending' (bahan kunci blm serah-terima)
+  // & 'diretur' tetap tampil di list (transparan) tapi tak ikut terjumlah (msh dibekukan/batal).
+  const isReleased = r => (r.status||'released') === 'released';
+  const total = rows.filter(isReleased).reduce((s,r) => s + (parseFloat(r.komisi) || 0), 0);
+  const pendingRows = rows.filter(r => r.status === 'pending');
+  const pendingTotal = pendingRows.reduce((s,r) => s + (parseFloat(r.komisi) || 0), 0);
+
+  if (!rows.length) {
+    box.innerHTML = `
+    <div class="komisi-summary">
+      <div class="ks-label">Total Komisi</div>
+      <div class="ks-value">${fmtRp(0)}</div>
+      <div class="ks-sub">0 transaksi</div>
+    </div>
+    <div class="empty-state" style="padding-top:24px;">
+      <div class="icon">📭</div><div class="msg">Belum ada komisi pada rentang ini.</div>
+    </div>`;
+    return;
+  }
+
+  const grouped = {};
+  rows.forEach(r => { (grouped[r.tanggal] = grouped[r.tanggal] || []).push(r); });
+  const dates = Object.keys(grouped).sort().reverse();
+
+  let html = `
+  <div class="komisi-summary">
+    <div class="ks-label">Total Komisi</div>
+    <div class="ks-value">${fmtRp(total)}</div>
+    <div class="ks-sub">${rows.length} transaksi · ${dates.length} hari</div>
+  </div>`;
+
+  if (pendingRows.length) {
+    html += `
+    <div style="background:rgba(224,168,92,.12);border:1px solid var(--warn);border-radius:16px;padding:13px 15px;margin:12px 16px 4px">
+      <div style="font-size:13px;font-weight:700;color:var(--warn)">⚠️ ${fmtRp(pendingTotal)} komisi masih dibekukan</div>
+      <div style="font-size:11.5px;color:var(--text2);margin-top:3px;line-height:1.5">${pendingRows.length} treatment pakai bahan kunci belum diserah-terimakan. Segera selesaikan lewat tab <b>🔑 Serah Kunci</b> supaya komisi ini cair.</div>
+    </div>`;
+  }
+
+  dates.forEach(d => {
+    const dayTotal = grouped[d].filter(isReleased).reduce((s,r) => s + (parseFloat(r.komisi)||0), 0);
+    html += `<div class="komisi-day"><span>${formatDate(d)}</span><span>${fmtRp(dayTotal)}</span></div>`;
+    grouped[d].forEach(r => {
+      const pending = r.status === 'pending';
+      const diretur = r.status === 'diretur';
+      const warnStyle = pending ? 'border-left:3px solid var(--warn);' : diretur ? 'opacity:.55;' : '';
+      // handshake_dengan kosong = K memang belum dipilih kasir sama sekali (status
+      // 'terlewat'), BUKAN gagal terdeteksi — jangan tampilkan label "dari: —" yg
+      // membingungkan, ganti dgn peringatan yg lebih spesifik.
+      const kBelumDipilih = pending && !r.handshake_dengan && (r.handshake_peran === 'pelaksana' || !r.handshake_peran);
+      const handshakeLbl = r.handshake_dengan && r.handshake_peran === 'pelaksana' ? `🔑 Bahan kunci dari: <b>${r.handshake_dengan}</b>`
+                          : r.handshake_dengan && r.handshake_peran === 'kunci' ? `🤝 Diserahkan ke: <b>${r.handshake_dengan}</b>` : '';
+      html += `
+      <div class="komisi-item" style="${warnStyle}">
+        <div style="flex:1;min-width:0;">
+          <div class="ki-jasa">${r.nm_pelayanan || '—'}${pending?' <span style="font-size:9px;font-weight:700;padding:1px 7px;border-radius:9px;background:var(--warn);color:#fff;margin-left:4px;">MENUNGGU</span>':''}${diretur?' <span style="font-size:9px;font-weight:700;padding:1px 7px;border-radius:9px;background:var(--danger);color:#fff;margin-left:4px;">DIRETUR</span>':''}</div>
+          <div class="ki-meta">${r.nm_pasien || r.kd_pasien || '—'}${r.no_faktur ? ' · '+r.no_faktur : ''}</div>
+          ${handshakeLbl?`<div style="font-size:10.5px;color:var(--pink);margin-top:2px;">${handshakeLbl}</div>`:''}
+          ${kBelumDipilih
+            ? '<div style="font-size:10.5px;color:var(--warn);margin-top:2px;">⚠️ Perawat K belum dipilih kasir — minta kasir selesaikan di menu Serah-Terima Kunci</div>'
+            : pending?'<div style="font-size:10.5px;color:var(--warn);margin-top:2px;">⚠️ Segera lakukan serah-terima bahan kunci</div>':''}
+        </div>
+        <div class="ki-komisi" style="${pending?'color:var(--warn);':diretur?'color:var(--danger);text-decoration:line-through;':''}">${fmtRp(r.komisi)}</div>
+      </div>`;
+    });
+  });
+  box.innerHTML = html;
+}
+
+// Close modal on backdrop click
+document.querySelectorAll('.modal-overlay').forEach(m => {
+  m.addEventListener('click', e => { if (e.target === m) closeModal(); });
+});
+
+// ── AUTH ──────────────────────────────────────────────────
+async function doMobileLogin() {
+  const u = $('l-user')?.value?.trim();
+  const p = $('l-pass')?.value;
+  const errEl = $('login-err');
+  if (!u || !p) { if(errEl) errEl.textContent='Username dan password wajib'; return; }
+  if(errEl) errEl.textContent='';
+  try {
+    const res = await api('/api/login', {method:'POST', body:{username:u, password:p}});
+    if (res.ok && res.token) {
+      const role = res.user?.role;
+      if (role !== 'perawat' && role !== 'beautician') {
+        if(errEl) errEl.textContent = 'Akses halaman ini hanya untuk perawat / beautician';
+        await api('/api/logout', {method:'POST'}).catch(()=>{});
+        return;
+      }
+      state.user  = res.user;
+      state.token = res.token;
+      saveSession(res.user, res.token);
+      $('login-overlay')?.classList.add('hidden');
+      _gotoHomeOrSerah();
+    } else {
+      if(errEl) errEl.textContent = res.msg || 'Login gagal';
+    }
+  } catch(e) {
+    if(errEl) errEl.textContent = 'Tidak dapat terhubung ke server';
+  }
+}
+
+// Kalau halaman dibuka lewat link QR serah-terima (?serah=...), langsung arahkan
+// ke screen Serah Kunci (kode sudah dipre-fill di sana) — bukan screen default.
+function _gotoHomeOrSerah() {
+  if (new URLSearchParams(location.search).get('serah')) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active','prev'));
+    $('scr-serah')?.classList.add('active');
+    renderSerah();
+    updateBottomNav();
+  } else {
+    renderSearch();
+  }
+}
+
+function doMobileLogout() {
+  if (state.token) api('/api/logout', {method:'POST'}).catch(()=>{});
+  state.user = null;
+  state.token = null;
+  clearSession();
+  stopCamera();
+  $('login-overlay')?.classList.remove('hidden');
+  // Reset app to search screen
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active','prev'));
+  $('scr-search')?.classList.add('active');
+  updateBottomNav();
+}
+
+// Enter on password field triggers login
+document.addEventListener('DOMContentLoaded', () => {
+  $('l-pass')?.addEventListener('keydown', e => { if(e.key==='Enter') doMobileLogin(); });
+  $('l-user')?.addEventListener('keydown', e => { if(e.key==='Enter') $('l-pass')?.focus(); });
+});
+
+// ── INIT ──────────────────────────────────────────────────
+// Try restore saved session
+const _saved = loadSession();
+if (_saved?.token && _saved?.user) {
+  state.user  = _saved.user;
+  state.token = _saved.token;
+  $('login-overlay')?.classList.add('hidden');
+  _gotoHomeOrSerah();
+  validateSession();   // segarkan data user (kd_karyawan) & cek token masih valid
+}
+// If no session, login overlay stays visible (no renderSearch call)
+
+// Validasi sesi tersimpan ke server: ambil data user terkini (lengkap kd_karyawan),
+// atau paksa login ulang kalau token sudah tidak valid (mis. server habis restart).
+async function validateSession() {
+  let res;
+  try { res = await api('/api/me'); }
+  catch (e) { return; }   // server tak terjangkau → biarkan sesi lokal, jangan tendang
+  if (res && res.ok && res.user) {
+    state.user = res.user;
+    saveSession(res.user, state.token);
+    const active = document.querySelector('.screen.active')?.id;
+    if (active === 'scr-kit') renderKit();   // refresh layar kit kalau sedang dibuka
+  } else {
+    // Sesi tidak valid → minta login ulang supaya dapat token baru
+    clearSession();
+    state.user = null; state.token = null;
+    $('login-overlay')?.classList.remove('hidden');
+    const el = $('login-err'); if (el) el.textContent = 'Sesi berakhir, silakan login kembali';
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,34 @@
+# ─── Data produksi & privat (JANGAN PERNAH commit — data pasien/transaksi nyata) ───
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+*.sqlite3
+backup/
+backup_histori/
+sementara/
+sementara copy/
+migr_temp/
+static/uploads/
+*.jsonl.gz
+
+# ─── Log & file sementara ───
+srv_out.txt
+srv_err.txt
+migr_log.txt
+*.log
+
+# ─── Python ───
+__pycache__/
+*.pyc
+*.pyo
+venv/
+.venv/
+env/
+
+# ─── Tooling lokal (bukan bagian aplikasi, bisa berisi path/kredensial lokal) ───
+.claude/
+
+# ─── OS / editor ───
+.DS_Store
+Thumbs.db

@@ -1,0 +1,89 @@
+kd_racik,kd_barang,nm_barang,komposisi,Satuan,nm_racik
+Cream BT,Cream CL gr,CL,0.228,gr,BT
+Cream BT,"Zalp Vitacid 0,1%  20gr",Retinoic acid 0.1%,0.8,gr,BT
+Cream CM1,Tretinoin gr,Tretinoin,0.002,gr,CM1
+Cream CM2,Zalp Melaskin cr 20gr,Hidroquinon 5%,0.8,gr,CM2
+Cream CM2,Base III gr,Base III,0.2,gr,CM2
+Cream CM2,Acid Lactic ml,Acid Lactic,0.004,ml,CM2
+Cream CM2,Acid Citric gr,Acid Citric,0.005,gr,CM2
+Cream L,Tretinoin gr,Tretinoin,0.002,gr,L
+Cream L,Acid Citric gr,Acid Citric,0.01,gr,L
+Cream L,Acid Lactic ml,Acid Lactic,0.01,ml,L
+Cream L1,Tretinoin gr,Tretinoin,0.0003,gr,L1
+Cream L1,Acid Citric gr,Acid Citric,0.01,gr,L1
+Cream L1,Acid Lactic ml,Acid Lactic,0.01,ml,L1
+Cream L2,Tretinoin gr,Tretinoin,0.001,gr,L2
+Cream L2,Acid Citric gr,Acid Citric,0.01,gr,L2
+Cream L2,Acid Lactic ml,Acid Lactic,0.01,ml,L2
+Cream T,Tretinoin gr,Tretinoin,0.002,gr,T
+Cream T,Acid Lactic ml,Acid Lactic,0.004,ml,T
+Cream T,Base III gr,Base III,1,gr,T
+Cream T Forte,Cream Vitacid Gel gr,Vitacid Gel,0.5,gr,T Forte
+HTRRB ml,Lotion Vitacid ml,Lotion,0.5,ml,Hair Tonic
+Cream T Forte,Tretinoin gr,Tretinoin,0.002,gr,T Forte
+Cream A1,"Zalp Reticor 0,1%  15gr",Tretinoin 0.1%,0.26,gr,A1
+Cream M,Cream Noroid 80gr,Noroid cream,0.6,gr,M
+Cream M,Cream Little Pam 30gr,Little pam,0.3,gr,M
+Cream A2,"Zalp Reticor 0,1%  15gr",Tretinoin 0.1%,0.52,gr,A2
+Cream A3,"Zalp Reticor 0,1%  15gr",Tretinoin 0.1%,1,gr,A3
+Cream A3+,"Zalp Vitacid 0,1%  20gr",Retinoic acid 0.1%,1,gr,A3+
+Cream CM1,Zalp Melaskin cr 20gr,Hidroquinon 5%,1,gr,CM1
+Cream L,Zalp Melaskin cr 20gr,Hidroquinon 5%,1,gr,L
+Cream L1,Zalp Melaskin cr 20gr,Hidroquinon 5%,1,gr,L1
+Cream L2,Zalp Melaskin cr 20gr,Hidroquinon 5%,1,gr,L2
+Cream B,Zalp Evalen cr 10gr,Adapalene,0.666,gr,B cream
+Cream B,Zalp Zelface 10gr,Azelaic acid,0.333,gr,B cream
+Cream MG,Zalp Erymed Gel 15 gr,Erythromycin 2%,0.75,gr,MG
+Cream MG,Zalp Niacef Gel 15gr,Micotinamide,0.375,gr,MG
+Cream SC,Zalp Sodermix 15gr,"Isopropil myristate,aqua,",0.3,gr,SC
+Cream SC,Zalp Tekasol 10gr,Ektrak centella,0.45,gr,SC
+Cream SC,Zalp Lanakeloid cr 10gr,Centella asiatic phytosom,0.2,gr,SC
+Cream SC,Zalp Erymed cr 20 gr,Erytromycin 2%,0.1,gr,SC
+Cream A2,Clindamycin Phosphate gr,Clindamycin Phosphate,0.04,gr,A2
+Cream A1,Base II gr,Base II,0.74,gr,A1
+Cream A3+,Clindamycin Phosphate gr,Clindamycin Phosphate,0.04,gr,A3+
+Cream A2,Base II gr,Base II,0.47,gr,A2
+Cream T Forte,Base III gr,Base III,0.5,gr,T Forte
+HTRRB ml,Sanbe Hair ml,Minoxidil,0.4,ml,Hair Tonic
+Cream A3+,Acid Lactic ml,Acid Lactic,0.01,ml,A3+
+Serum Regenerating 10ml,Serum Regenerant ml,Regenerant serum 30 ml,3.28,ml,Serum Regenerating
+Cream BC,Zalp Mediklin TR gram,Clindamycin phosphate,0.375,gr,BC
+Cream BC,Zalp Erymed cr 20 gr,Erytromycin 2%,0.35,gr,BC
+Cream CW1,Cream CW1 gr,Koniderm,0.925,gr,CW1
+Cream BT2,Cream Zo Pigment Control,Hydroquinone 4%,0.25,gr,BT2
+Cream BT2,"Zalp Reticor 0,05% 15gr",Tretinoin 0.05%,0.75,gr,BT2
+HTRRB Forte 60ml,Lotion Vitacid ml,Lotion,30,ml,Hair Tonic
+Lightening Solution 600ml,Alkohol 70% ml,Alkohol 70%,0.15,ml,Lightening Sol
+HTRRB Forte 60ml,Trilac Injeksi 5 ml,Triamcinolone,0.5,ml,Hair Tonic
+Serum Regenerating 10ml,Regenerant ml,Regenerant,1.4,ml,Serum Regenerating
+Serum Regenerating 10ml,Polyskin Vit C (G) ml,Vit C Gel,5.31,ml,Serum Regenerating
+Cream CW1,Cream CW3 gr,CW3,0.075,gr,CW1
+Acne Solution 600ml,Clindamycin Phosphate gr,Clindamycin Phosphate,0.008,gr,Acne Sol
+Acne Solution 600ml,Acid Salicyl gr,Acid Salicyl,0.0005,gr,Acne Sol
+Acne Solution 600ml,Acid Lactic ml,Acid Lactic,0.01,ml,Acne Sol
+Acne Solution 600ml,Alkohol 70% ml,Alkohol 70%,0.03,ml,Acne Sol
+Acne Solution 600ml,Propylene Glycol ml,Propylene Glycol,0.007,ml,Acne Sol
+Acne Solution 600ml,Cleansing 100 ml,Cleansing,0.001,pcs,Acne Sol
+Acne Solution 600ml,Aquabidest dirijen ml,Aquabidest,0.837,ml,Acne Sol
+Lightening Solution 600ml,Acid Salicyl gr,Acid Salicyl,0.005,gr,Lightening Sol
+Cream BC,Cream CRJB,CRJB,0.0075,gr,BC
+Lightening Solution 600ml,Propylene Glycol ml,Propylene Glycol,0.03,ml,Lightening Sol
+Lightening Solution 600ml,Polyskin Vit C (G) ml,Vit C Gel,0.02,ml,Lightening Sol
+Lightening Solution 600ml,Acid Lactic ml,Acid Lactic,0.01,ml,Lightening Sol
+Lightening Solution 600ml,Aquabidest dirijen ml,Aquabidest,0.785,ml,Lightening Sol
+Cream T Forte,Acid Lactic ml,Acid Lactic,0.0038,ml,T Forte
+Cream A1,Clindamycin Phosphate gr,Clindamycin Phosphate,0.04,gr,A1
+Cream A3,Clindamycin Phosphate gr,Clindamycin Phosphate,0.04,gr,
+HTRRB ml,Lotion Kloderma ml,Clobetasol 0.05%,0.1,ml,
+HTRRB Forte 60ml,Sanbe Hair ml,Minoxidil,30,ml,
+Cream BC,Cream Noroid 80gr,Noroid cream,0.2,gr,BC
+Serum Calming,Serum Aven Tolerance,Tolerance control,0.2,ml,serum calming
+Cream M+,Cream Little Pam 30gr,Little pam,0.36,gr,M+
+Cream M+,Cream Noroid 80gr,Noroid cream,0.4,gr,M+
+Cream M,Zalp Sodermix 15gr,"Isopropil myristate,aqua,",0.1,gr,
+Cream M+,Cream Glikoderm R,Pelembab,0.1,gr,M+
+Cream M+,Cream Acneclear gr,Biome Ceramide,0.06,gr,M+
+Serum Calming,Regenerant ml,Regenerant,0.06,ml,serum calming
+Serum Calming,Polyskin Vit C (G) ml,Vit C Gel,0.56,ml,serum calming
+Serum Calming,Serum Regenerant ml,Regenerant serum 30 ml,0.2,ml,serum calming
+Cream M+,Cream Aven Tolerance,Tolerance,0.08,gr,

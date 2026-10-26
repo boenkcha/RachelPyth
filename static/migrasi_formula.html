@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Migrasi Formula Produksi (BOM) — Rachel Clinic</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;600&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f5f1ea;--bg2:#fff;--bg3:#ede8df;--bg4:#e2dbd0;
+  --border:rgba(90,60,15,.10);--border2:rgba(90,60,15,.18);
+  --gold:#946c0e;--gold-dim:rgba(148,108,14,.12);
+  --rose:#b84252;--rose-dim:rgba(184,66,82,.12);
+  --teal:#1a9d8e;--teal-dim:rgba(26,157,142,.13);
+  --text:#1c1710;--text2:#4a3c28;--text3:#978268;
+  --danger:#c0322a;--success:#1c7a42;--radius:12px;--radius-sm:8px;
+  --shadow:0 2px 18px rgba(90,60,15,.09);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:0 0 60px;}
+.page-header{background:var(--bg2);border-bottom:1px solid var(--border);padding:18px 40px;display:flex;align-items:center;gap:18px;box-shadow:var(--shadow);}
+.header-logo{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--gold);letter-spacing:3px;}
+.header-sep{width:1px;height:26px;background:var(--border2);}
+.header-title{font-size:15px;font-weight:600;color:var(--text2);}
+.header-back{margin-left:auto;font-size:13px;color:var(--gold);text-decoration:none;font-weight:500;padding:8px 16px;border:1px solid var(--border2);border-radius:var(--radius-sm);background:var(--bg3);}
+.header-back:hover{background:var(--gold-dim);border-color:var(--gold);}
+.container{max-width:880px;margin:32px auto;padding:0 24px;}
+.banner{background:linear-gradient(135deg,#fff9ee,#fff4e0);border:1px solid rgba(148,108,14,.20);border-radius:var(--radius);padding:16px 22px;margin-bottom:24px;font-size:13px;color:var(--text2);line-height:1.65;}
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px 26px;margin-bottom:22px;}
+.card-title{font-size:15px;font-weight:600;color:var(--text);margin-bottom:4px;display:flex;align-items:center;gap:8px;}
+.card-sub{font-size:12px;color:var(--text3);margin-bottom:16px;}
+.btn{font-family:inherit;font-size:13px;font-weight:600;padding:10px 18px;border-radius:var(--radius-sm);border:1px solid var(--border2);background:var(--bg3);color:var(--text2);cursor:pointer;transition:.18s;}
+.btn:hover{background:var(--gold-dim);border-color:var(--gold);}
+.btn-primary{background:var(--gold);color:#fff;border-color:var(--gold);}
+.btn-primary:hover{filter:brightness(1.07);background:var(--gold);}
+.btn:disabled{opacity:.5;cursor:not-allowed;}
+.badge{display:inline-block;font-size:11px;font-weight:600;padding:3px 9px;border-radius:20px;}
+.badge-teal{background:var(--teal-dim);color:var(--teal);}
+.badge-gold{background:var(--gold-dim);color:var(--gold);}
+.badge-rose{background:var(--rose-dim);color:var(--rose);}
+.badge-gray{background:var(--bg4);color:var(--text3);}
+.map-row{display:flex;align-items:center;gap:10px;font-size:12.5px;padding:5px 0;border-bottom:1px dashed var(--border);}
+.map-csv{font-family:'DM Mono',monospace;color:var(--text2);min-width:120px;}
+.map-arrow{color:var(--text3);}
+.map-db{font-family:'DM Mono',monospace;color:var(--teal);}
+.stat-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin:14px 0;}
+.stat-box{background:var(--bg3);border-radius:var(--radius-sm);padding:12px 14px;text-align:center;}
+.stat-num{font-size:22px;font-weight:700;color:var(--gold);font-family:'DM Mono',monospace;}
+.stat-num.warn{color:var(--rose);}
+.stat-label{font-size:11px;color:var(--text3);margin-top:2px;}
+.chip-list{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+.chip{font-family:'DM Mono',monospace;font-size:11px;background:var(--rose-dim);color:var(--rose);padding:3px 8px;border-radius:6px;}
+.mode-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:6px;}
+.mode-opt{flex:1;min-width:220px;border:1.5px solid var(--border2);border-radius:var(--radius-sm);padding:12px 14px;cursor:pointer;transition:.15s;}
+.mode-opt.active{border-color:var(--gold);background:var(--gold-dim);}
+.mode-opt .t{font-size:13px;font-weight:600;color:var(--text);}
+.mode-opt .d{font-size:11px;color:var(--text3);margin-top:3px;}
+.hint{font-size:11px;color:var(--text3);margin-top:5px;display:block;}
+.result{border-radius:var(--radius);padding:18px 22px;margin-top:6px;}
+.result.ok{background:var(--teal-dim);border:1px solid var(--teal);}
+.result.err{background:var(--rose-dim);border:1px solid var(--rose);}
+.muted{color:var(--text3);font-size:12px;}
+input[type=file]{font-size:12px;}
+</style>
+</head>
+<body>
+<div class="page-header">
+  <div class="header-logo">Rachel</div>
+  <div class="header-sep"></div>
+  <div class="header-title">🧪 Migrasi Formula Produksi (BOM Racikan)</div>
+  <a href="/" class="header-back">← Kembali</a>
+</div>
+
+<div class="container">
+  <div class="banner">
+    Mengimpor <b>formula racikan lama</b> (file <b>FormRacik.csv</b>: <code>kd_racik, kd_barang, nm_barang, komposisi, Satuan, nm_racik</code>) ke
+    <b>Formula Produksi (BOM)</b> sistem baru. Tiap <b>kd_racik</b> jadi 1 formula (header), tiap baris jadi 1 bahan (detail).
+    Bahan/produk yang belum ada akan <b>otomatis didaftarkan ke master Barang</b>. <code>qty_hasil</code>=1, satuan = satuan terbanyak bahannya (bisa dirapikan di halaman Formula Produksi).
+  </div>
+
+  <!-- Pilih File CSV -->
+  <div class="card">
+    <div class="card-title">📁 Pilih File CSV</div>
+    <div class="card-sub">Pilih file lalu klik Upload ke Server — setelah terunggah, sistem akan menganalisa otomatis.</div>
+    <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+      <input type="file" id="file" accept=".csv" onchange="onFileChange()">
+      <button class="btn btn-primary" id="btn-upload" onclick="uploadFile()" disabled>⬆ Upload ke Server</button>
+      <span id="file-status" class="muted">Belum ada file dipilih.</span>
+    </div>
+  </div>
+
+  <div id="content"></div>
+</div>
+
+<script>
+let infoData   = null;
+let chosenFile = null;
+let _mode = 'append';
+
+function onFileChange() {
+  const f = document.getElementById('file').files[0];
+  if (!f) return;
+  chosenFile = f;
+  const el = document.getElementById('file-status');
+  el.innerHTML = `✔ ${f.name} (${(f.size/1024/1024).toFixed(1)} MB)`;
+  document.getElementById('content').innerHTML = '';
+  document.getElementById('btn-upload').disabled = false;
+}
+
+async function uploadFile() {
+  if (!chosenFile) return;
+  const btn = document.getElementById('btn-upload');
+  const el  = document.getElementById('file-status');
+  btn.disabled = true;
+  el.innerHTML = `✔ ${chosenFile.name} (${(chosenFile.size/1024/1024).toFixed(1)} MB) — mengunggah...`;
+  try {
+    const fd = new FormData();
+    fd.append('file', chosenFile);
+    const data = await (await fetch('/api/migrasi_formula/upload', { method: 'POST', body: fd })).json();
+    if (!data.ok) throw new Error(data.msg || 'Upload gagal');
+    el.innerHTML = `✔ ${chosenFile.name} (${(chosenFile.size/1024/1024).toFixed(1)} MB) — menganalisa...`;
+    await analyzeFile();
+  } catch (e) {
+    el.innerHTML = `❌ Gagal mengunggah: ${e.message}`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+let _analyzeToken = 0;
+async function analyzeFile() {
+  const myToken = ++_analyzeToken;
+  const res = await (await fetch('/api/migrasi_formula/info')).json();
+  if (myToken !== _analyzeToken) return;
+  infoData = res.formula || {};
+  const c = document.getElementById('content');
+  if (infoData.error){ c.innerHTML = `<div class="card"><span class="badge badge-rose">Gagal menganalisa</span><div style="margin-top:8px;color:var(--danger)">${infoData.error}</div></div>`; return; }
+
+  const mapRows = (infoData.mapped||[]).map(m=>`<div class="map-row"><span class="map-csv">${m.csv}</span><span class="map-arrow">→</span><span class="map-db">${m.db}</span><span class="badge badge-teal" style="margin-left:auto">cocok</span></div>`).join('');
+  const skipped = (infoData.skipped_csv||[]).length ? `<div style="margin-top:10px"><span class="badge badge-gold">${infoData.skipped_csv.length} kolom CSV diabaikan</span> <span class="muted">${infoData.skipped_csv.join(', ')}</span></div>`:'';
+  const missing = (infoData.missing_db||[]).length ? `<div style="margin-top:6px"><span class="badge badge-rose">${infoData.missing_db.length} kolom wajib tak ada di CSV</span> <span class="muted">${infoData.missing_db.join(', ')}</span></div>`:'';
+
+  const bahanCocok  = infoData.bahan_total - (infoData.bahan_belum||[]).length;
+  const produkCocok = infoData.produk_total - (infoData.produk_belum||[]).length;
+  const chipBahan  = (infoData.bahan_belum||[]).length ? `<div class="hint">Bahan belum ada di master (akan dibuat otomatis):</div><div class="chip-list">${infoData.bahan_belum.map(b=>`<span class="chip">${b}</span>`).join('')}</div>`:'';
+  const chipProduk = (infoData.produk_belum||[]).length ? `<div class="hint">Produk hasil belum ada di master (akan dibuat otomatis):</div><div class="chip-list">${infoData.produk_belum.map(p=>`<span class="chip">${p}</span>`).join('')}</div>`:'';
+
+  c.innerHTML = `
+  <div class="card">
+    <div class="card-title">🔗 Sinkronisasi Kolom <span class="badge badge-gray" style="margin-left:auto">${infoData.file}</span></div>
+    <div class="card-sub">${infoData.row_count} baris · ${infoData.formula_count} formula (kd_racik)</div>
+    ${mapRows}${skipped}${missing}
+  </div>
+
+  <div class="card">
+    <div class="card-title">📊 Ringkasan Migrasi</div>
+    <div class="stat-grid">
+      <div class="stat-box"><div class="stat-num">${infoData.formula_count}</div><div class="stat-label">Formula (header)</div></div>
+      <div class="stat-box"><div class="stat-num">${infoData.row_count}</div><div class="stat-label">Bahan (detail)</div></div>
+      <div class="stat-box"><div class="stat-num">${bahanCocok}/${infoData.bahan_total}</div><div class="stat-label">Bahan cocok di master</div></div>
+      <div class="stat-box"><div class="stat-num">${produkCocok}/${infoData.produk_total}</div><div class="stat-label">Produk cocok di master</div></div>
+    </div>
+    ${chipBahan}${chipProduk}
+  </div>
+
+  <div class="card">
+    <div class="card-title">⚙️ Mode Migrasi</div>
+    <div class="mode-row">
+      <label class="mode-opt active" id="mode-append" onclick="setMode('append')">
+        <div class="t">➕ Tambah (Append)</div>
+        <div class="d">Tambah formula baru; lewati yang produk hasilnya sudah punya formula aktif.</div>
+      </label>
+      <label class="mode-opt" id="mode-replace" onclick="setMode('replace')">
+        <div class="t">♻️ Ganti Semua (Replace)</div>
+        <div class="d">Hapus SEMUA formula & detail lama dulu, lalu impor ulang dari file.</div>
+      </label>
+    </div>
+    <div style="margin-top:16px;">
+      <button class="btn btn-primary" id="btn-exec" onclick="eksekusi()">▶ Jalankan Migrasi</button>
+    </div>
+    <div id="result"></div>
+  </div>`;
+}
+
+function setMode(m){
+  _mode = m;
+  document.getElementById('mode-append').classList.toggle('active', m==='append');
+  document.getElementById('mode-replace').classList.toggle('active', m==='replace');
+}
+
+async function eksekusi(){
+  const btn = document.getElementById('btn-exec');
+  const res = document.getElementById('result');
+  if (_mode==='replace' && !confirm('Mode GANTI SEMUA akan menghapus seluruh formula produksi yang ada. Lanjutkan?')) return;
+  btn.disabled = true; btn.textContent = 'Memproses…';
+  res.innerHTML = '';
+
+  try{
+    const r = await (await fetch('/api/migrasi_formula/eksekusi', {
+      method: 'POST', headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ mode: _mode }),
+    })).json();
+    if (!r.ok) throw new Error(r.msg || 'Terjadi kesalahan tidak diketahui.');
+    res.innerHTML = `<div class="result ok">
+      <div style="font-weight:700;color:var(--success);margin-bottom:8px;">✅ Migrasi Formula Berhasil</div>
+      <div class="stat-grid">
+        <div class="stat-box"><div class="stat-num">${r.formula_count||0}</div><div class="stat-label">Formula diimpor</div></div>
+        <div class="stat-box"><div class="stat-num">${r.detail_count||0}</div><div class="stat-label">Bahan diimpor</div></div>
+        <div class="stat-box"><div class="stat-num">${r.formula_skip||0}</div><div class="stat-label">Formula dilewati</div></div>
+        <div class="stat-box"><div class="stat-num">${r.master_created||0}</div><div class="stat-label">Master Barang baru</div></div>
+      </div>
+    </div>`;
+  } catch(e){
+    res.innerHTML = `<div class="result err"><b style="color:var(--danger)">Gagal:</b> ${e.message}</div>`;
+  }
+  btn.disabled = false; btn.textContent = '▶ Jalankan Migrasi';
+}
+</script>
+</body>
+</html>

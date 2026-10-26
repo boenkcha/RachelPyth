@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Migrasi Stok Barang — Rachel Clinic</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #f5f1ea;
+  --bg2:     #ffffff;
+  --bg3:     #ede8df;
+  --bg4:     #e2dbd0;
+  --border:  rgba(90,60,15,0.10);
+  --border2: rgba(90,60,15,0.18);
+  --gold:    #946c0e;
+  --gold2:   #b88c2a;
+  --gold-dim: rgba(148,108,14,0.12);
+  --rose:    #b84252;
+  --rose-dim: rgba(184,66,82,0.12);
+  --teal:    #1a9d8e;
+  --teal-dim: rgba(26,157,142,0.13);
+  --text:    #1c1710;
+  --text2:   #4a3c28;
+  --text3:   #978268;
+  --danger:  #c0322a;
+  --success: #1c7a42;
+  --warning: #c4670a;
+  --radius:    12px;
+  --radius-sm: 8px;
+  --shadow: 0 2px 18px rgba(90,60,15,0.09);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:0 0 60px;}
+
+/* ─── HEADER ─────────────────────────────── */
+.page-header{
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  padding:20px 40px;display:flex;align-items:center;gap:18px;
+  box-shadow:var(--shadow);
+}
+.header-logo{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:400;color:var(--gold);letter-spacing:3px;}
+.header-sep{width:1px;height:28px;background:var(--border2);}
+.header-title{font-size:15px;font-weight:600;color:var(--text2);letter-spacing:.3px;}
+.header-back{margin-left:auto;font-size:13px;color:var(--gold);text-decoration:none;font-weight:500;
+  padding:8px 16px;border:1px solid var(--border2);border-radius:var(--radius-sm);
+  transition:.2s;background:var(--bg3);}
+.header-back:hover{background:var(--gold-dim);border-color:var(--gold);}
+
+/* ─── MAIN CONTAINER ─────────────────────── */
+.container{max-width:900px;margin:36px auto;padding:0 24px;}
+
+/* ─── INFO BANNER ─────────────────────────── */
+.info-banner{
+  background:linear-gradient(135deg,#fff9ee,#fff4e0);
+  border:1px solid rgba(148,108,14,0.20);border-radius:var(--radius);
+  padding:18px 24px;margin-bottom:28px;
+  display:flex;align-items:flex-start;gap:14px;
+}
+.info-icon{font-size:20px;margin-top:1px;flex-shrink:0;}
+.info-text{font-size:13.5px;color:var(--text2);line-height:1.6;}
+.info-text strong{color:var(--gold);}
+
+/* ─── SECTION CARD ───────────────────────── */
+.section-card{
+  background:var(--bg2);border-radius:var(--radius);
+  border:1px solid var(--border);box-shadow:var(--shadow);
+  margin-bottom:24px;overflow:hidden;
+}
+.section-header{
+  padding:18px 24px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.section-title{
+  font-size:15px;font-weight:600;color:var(--text);
+  display:flex;align-items:center;gap:10px;
+}
+.section-subtitle{font-size:12px;color:var(--text3);font-weight:400;margin-top:2px;}
+.badge{
+  display:inline-flex;align-items:center;gap:4px;
+  font-size:11px;font-family:'DM Mono',monospace;font-weight:500;
+  padding:3px 10px;border-radius:20px;
+}
+.badge-gold{background:var(--gold-dim);color:var(--gold);}
+.badge-teal{background:var(--teal-dim);color:var(--teal);}
+.badge-rose{background:var(--rose-dim);color:var(--rose);}
+.badge-gray{background:var(--bg3);color:var(--text3);}
+.row-count{font-size:12px;color:var(--text3);font-family:'DM Mono',monospace;}
+.section-body{padding:20px 24px;}
+
+/* ─── MAPPING TABLE ──────────────────────── */
+.map-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px;}
+.map-col h4{font-size:11px;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);
+  font-weight:600;margin-bottom:10px;}
+.map-list{display:flex;flex-direction:column;gap:5px;}
+.map-item{
+  display:flex;align-items:center;gap:8px;
+  padding:7px 12px;border-radius:var(--radius-sm);font-size:12.5px;
+  font-family:'DM Mono',monospace;
+}
+.map-item.matched{background:var(--teal-dim);color:#155e55;}
+.map-item.skipped{background:var(--rose-dim);color:#8a2232;text-decoration:line-through;opacity:.8;}
+.map-item.missing{background:var(--gold-dim);color:#6b4e0a;}
+.map-arrow{color:var(--teal);font-size:11px;}
+.map-item.missing .map-arrow{color:var(--gold);}
+
+/* ─── DEFAULT VALUE FORM ─────────────────── */
+.defaults-section{border-top:1px solid var(--border);padding:20px 24px 0;}
+.defaults-title{
+  font-size:12px;text-transform:uppercase;letter-spacing:1.2px;
+  color:var(--gold);font-weight:600;margin-bottom:16px;
+  display:flex;align-items:center;gap:8px;
+}
+.defaults-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:14px;margin-bottom:20px;}
+.field{display:flex;flex-direction:column;gap:5px;}
+.field label{font-size:11.5px;font-weight:600;color:var(--text2);}
+.field .hint{font-size:10.5px;color:var(--text3);margin-top:2px;}
+.field input,.field select{
+  padding:9px 12px;background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--radius-sm);color:var(--text);font-family:'DM Sans',sans-serif;
+  font-size:13px;outline:none;transition:.2s;
+}
+.field input:focus,.field select:focus{
+  border-color:var(--gold);background:#fff;
+  box-shadow:0 0 0 3px var(--gold-dim);
+}
+.field select{cursor:pointer;}
+
+/* ─── MODE SELECTOR ──────────────────────── */
+.mode-section{
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:20px 24px;margin-bottom:24px;
+}
+.mode-title{font-size:13px;font-weight:600;color:var(--text2);margin-bottom:14px;}
+.mode-options{display:flex;gap:12px;}
+.mode-opt{
+  flex:1;padding:14px 16px;border:2px solid var(--border);border-radius:var(--radius-sm);
+  cursor:pointer;transition:.2s;
+}
+.mode-opt:hover{border-color:var(--gold2);background:var(--gold-dim);}
+.mode-opt.active{border-color:var(--gold);background:var(--gold-dim);}
+.mode-opt input[type=radio]{display:none;}
+.mode-opt-title{font-size:13px;font-weight:600;color:var(--text);}
+.mode-opt-desc{font-size:12px;color:var(--text3);margin-top:3px;line-height:1.4;}
+.mode-opt.active .mode-opt-title{color:var(--gold);}
+
+/* ─── EXECUTE BUTTON ─────────────────────── */
+.exec-section{text-align:center;margin-bottom:28px;}
+.btn-exec{
+  display:inline-flex;align-items:center;gap:10px;
+  padding:16px 48px;background:linear-gradient(135deg,var(--gold),var(--gold2));
+  border:none;border-radius:var(--radius-sm);color:#fff;font-weight:600;font-size:15px;
+  cursor:pointer;letter-spacing:.4px;transition:.2s;
+  box-shadow:0 4px 18px rgba(148,108,14,0.35);font-family:'DM Sans',sans-serif;
+}
+.btn-exec:hover:not(:disabled){opacity:.92;transform:translateY(-1px);box-shadow:0 6px 24px rgba(148,108,14,0.40);}
+.btn-exec:disabled{opacity:.5;cursor:not-allowed;transform:none;}
+.btn-exec .spinner{
+  width:18px;height:18px;border:2px solid rgba(255,255,255,.4);
+  border-top-color:#fff;border-radius:50%;
+  animation:spin .7s linear infinite;display:none;
+}
+.btn-exec.loading .spinner{display:block;}
+.btn-exec.loading .btn-label{opacity:.7;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+/* ─── RESULT CARD ────────────────────────── */
+.result-card{
+  border-radius:var(--radius);padding:24px;
+  border:1px solid;margin-bottom:24px;
+}
+.result-success{background:#f0faf5;border-color:#a3d9bc;}
+.result-error{background:#fff0f0;border-color:#f5baba;}
+.result-title{font-size:15px;font-weight:600;margin-bottom:14px;}
+.result-success .result-title{color:var(--success);}
+.result-error .result-title{color:var(--danger);}
+.result-stats{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;}
+.stat-box{
+  background:#fff;border-radius:var(--radius-sm);padding:14px 18px;
+  border:1px solid var(--border);text-align:center;
+}
+.stat-num{font-size:26px;font-weight:600;font-family:'DM Mono',monospace;color:var(--gold);}
+.stat-label{font-size:11px;color:var(--text3);margin-top:3px;text-transform:uppercase;letter-spacing:1px;}
+.stat-skip .stat-num{color:var(--warning);}
+.result-msg{font-size:13.5px;color:var(--danger);line-height:1.5;}
+
+/* ─── LOADING OVERLAY ────────────────────── */
+#loading-overlay{
+  display:none;position:fixed;inset:0;z-index:999;
+  background:rgba(245,241,234,.85);backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;flex-direction:column;gap:16px;
+}
+#loading-overlay.show{display:flex;}
+.loading-spinner{
+  width:48px;height:48px;border:3px solid var(--border2);
+  border-top-color:var(--gold);border-radius:50%;
+  animation:spin .8s linear infinite;
+}
+.loading-text{font-size:14px;color:var(--text2);font-weight:500;}
+.loading-sub{font-size:12px;color:var(--text3);}
+
+/* ─── UPLOAD SECTION ─────────────────────── */
+.upload-card{
+  background:var(--bg2);border-radius:var(--radius);
+  border:1px solid var(--border);box-shadow:var(--shadow);
+  margin-bottom:24px;overflow:hidden;
+}
+.upload-header{
+  padding:16px 24px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.upload-title{font-size:15px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:10px;}
+.upload-body{padding:20px 24px;}
+.upload-slot{
+  border:2px dashed var(--border2);border-radius:var(--radius-sm);
+  padding:24px 20px;text-align:center;cursor:pointer;transition:.2s;
+  position:relative;background:var(--bg3);max-width:420px;
+}
+.upload-slot:hover,.upload-slot.drag-over{border-color:var(--gold);background:var(--gold-dim);}
+.upload-slot.has-file{border-color:var(--teal);border-style:solid;background:var(--teal-dim);}
+.upload-slot.has-server{border-color:var(--teal);border-style:solid;background:#f0faf8;}
+.upload-slot input[type=file]{
+  position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;
+}
+.upload-icon{font-size:28px;margin-bottom:8px;}
+.upload-slot-title{font-size:14px;font-weight:600;color:var(--text2);margin-bottom:4px;}
+.upload-slot-hint{font-size:12px;color:var(--text3);}
+.upload-slot-file{font-size:12px;color:#155e55;font-family:'DM Mono',monospace;margin-top:6px;word-break:break-all;}
+.upload-slot-server{font-size:11px;color:var(--text3);margin-top:4px;}
+.upload-slot-server.exists{color:var(--teal);}
+.btn-upload{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:11px 32px;background:var(--gold);
+  border:none;border-radius:var(--radius-sm);color:#fff;font-weight:600;font-size:13.5px;
+  cursor:pointer;letter-spacing:.3px;transition:.2s;font-family:'DM Sans',sans-serif;margin-top:16px;
+}
+.btn-upload:hover:not(:disabled){opacity:.88;transform:translateY(-1px);}
+.btn-upload:disabled{opacity:.45;cursor:not-allowed;transform:none;}
+.upload-msg{font-size:12.5px;margin-top:10px;padding:9px 14px;border-radius:var(--radius-sm);}
+.upload-msg.ok{background:#f0faf5;color:var(--success);border:1px solid #a3d9bc;}
+.upload-msg.err{background:#fff0f0;color:var(--danger);border:1px solid #f5baba;}
+
+/* ─── SKELETON ───────────────────────────── */
+.skeleton{
+  background:linear-gradient(90deg,var(--bg3) 25%,var(--bg4) 50%,var(--bg3) 75%);
+  background-size:200% 100%;animation:shimmer 1.4s infinite;
+  border-radius:4px;height:16px;
+}
+@keyframes shimmer{0%{background-position:200% 0}100%{background-position:-200% 0}}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="page-header">
+  <div class="header-logo">RACHEL</div>
+  <div class="header-sep"></div>
+  <div>
+    <div class="header-title">Migrasi Stok Barang</div>
+  </div>
+  <a href="/" class="header-back">← Kembali ke Sistem</a>
+</div>
+
+<!-- Main -->
+<div class="container">
+
+  <!-- Info Banner -->
+  <div class="info-banner">
+    <div class="info-icon">📦</div>
+    <div class="info-text">
+      Halaman ini mengimpor data dari file <strong>Stok_barang.csv</strong> ke tabel
+      <strong>Stok_barang</strong> pada database sistem baru.
+      Semua kolom CSV cocok dengan database — kamu tinggal memilih <strong>Kode Lokasi</strong> tujuan.
+      Bila memilih <strong>INDUK</strong>, akan muncul pilihan <strong>Pemilik Induk</strong> (induk milik siapa,
+      dari master Pemilik Induk). Pilihan ini berlaku untuk semua baris yang diimpor.
+      File CSV mendukung format <strong>koma (,)</strong> maupun <strong>pipa (|)</strong> sebagai pemisah.
+    </div>
+  </div>
+
+  <!-- Pilih File CSV -->
+  <div class="upload-card">
+    <div class="upload-header">
+      <div class="upload-title">📁 Pilih File CSV</div>
+      <span class="badge badge-gray" id="upload-status-badge">Belum ada file dipilih</span>
+    </div>
+    <div class="upload-body">
+      <div class="upload-slot" id="slot-stok"
+           ondragover="onDrag(event)" ondragleave="offDrag()" ondrop="onDrop(event)">
+        <input type="file" id="file-stok" accept=".csv" onchange="onFileChange()">
+        <div class="upload-icon">📦</div>
+        <div class="upload-slot-title">Stok_barang.csv</div>
+        <div class="upload-slot-hint" id="hint-stok">Klik atau drag &amp; drop file di sini</div>
+        <div class="upload-slot-file" id="chosen-stok" style="display:none;"></div>
+      </div>
+      <div id="btn-upload-wrap" style="display:none;margin-top:14px;">
+        <button class="btn-upload" id="btn-upload" onclick="uploadFile()">⬆ Upload ke Server</button>
+      </div>
+      <div id="upload-msg" style="display:none;"></div>
+    </div>
+  </div>
+
+  <!-- Loading Skeleton -->
+  <div id="skeleton-area" style="display:none;">
+    <div class="section-card" style="padding:24px;">
+      <div class="skeleton" style="width:200px;margin-bottom:12px;"></div>
+      <div class="skeleton" style="width:100%;margin-bottom:8px;"></div>
+      <div class="skeleton" style="width:80%;"></div>
+    </div>
+  </div>
+
+  <!-- Placeholder sebelum file dipilih -->
+  <div id="idle-area" style="text-align:center;padding:40px 20px;color:var(--text3);font-size:13px;">
+    Pilih file CSV Stok Barang di atas untuk mulai dianalisa.
+  </div>
+
+  <!-- Content (diisi JS) -->
+  <div id="content-area" style="display:none;"></div>
+
+  <!-- Mode Selector -->
+  <div class="mode-section" id="mode-section" style="display:none;">
+    <div class="mode-title">Mode Import</div>
+    <div class="mode-options">
+      <label class="mode-opt active" id="mode-append-opt">
+        <input type="radio" name="mode" value="append" checked>
+        <div class="mode-opt-title">Tambah (Append)</div>
+        <div class="mode-opt-desc">Data baru ditambahkan. Baris duplikat (kd_barang sama) dilewati.</div>
+      </label>
+      <label class="mode-opt" id="mode-replace-opt">
+        <input type="radio" name="mode" value="replace">
+        <div class="mode-opt-title">Ganti (Replace)</div>
+        <div class="mode-opt-desc">Semua data Stok_barang yang ada dihapus dulu, lalu diisi ulang dari file.</div>
+      </label>
+    </div>
+  </div>
+
+  <!-- Execute Button -->
+  <div class="exec-section" id="exec-section" style="display:none;">
+    <button class="btn-exec" id="btn-exec" onclick="eksekusi()">
+      <div class="spinner"></div>
+      <span class="btn-label">Eksekusi Migrasi</span>
+    </button>
+    <div style="font-size:12px;color:var(--text3);margin-top:10px;">
+      Proses ini akan memakan waktu beberapa detik tergantung jumlah data.
+    </div>
+  </div>
+
+  <!-- Result -->
+  <div id="result-card"></div>
+
+</div>
+
+<!-- Loading Overlay -->
+<div id="loading-overlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Sedang mengeksekusi migrasi...</div>
+  <div class="loading-sub" id="loading-sub">Membaca file &amp; memasukkan data ke database</div>
+</div>
+
+<script>
+// ── State ────────────────────────────────────────────────────
+let infoData   = null;
+let chosenFile = null;
+
+// ── Pilih file: drag & drop ───────────────────────────────────
+function onDrag(e) {
+  e.preventDefault();
+  document.getElementById('slot-stok').classList.add('drag-over');
+}
+function offDrag() {
+  document.getElementById('slot-stok').classList.remove('drag-over');
+}
+function onDrop(e) {
+  e.preventDefault();
+  offDrag();
+  const file = e.dataTransfer.files[0];
+  if (file) setChosenFile(file);
+}
+function onFileChange() {
+  const input = document.getElementById('file-stok');
+  if (input.files[0]) setChosenFile(input.files[0]);
+}
+
+function setChosenFile(file) {
+  chosenFile = file;
+  const slot   = document.getElementById('slot-stok');
+  const hint   = document.getElementById('hint-stok');
+  const chosen = document.getElementById('chosen-stok');
+  slot.classList.remove('drag-over');
+  slot.classList.add('has-file');
+  hint.style.display = 'none';
+  chosen.style.display = 'block';
+  chosen.textContent = `✔ ${file.name} (${(file.size/1024/1024).toFixed(1)} MB)`;
+  document.getElementById('upload-status-badge').textContent = 'Siap diunggah';
+  document.getElementById('btn-upload-wrap').style.display = 'block';
+  document.getElementById('idle-area').style.display = 'none';
+  document.getElementById('upload-msg').style.display = 'none';
+  document.getElementById('content-area').style.display = 'none';
+  document.getElementById('mode-section').style.display = 'none';
+  document.getElementById('exec-section').style.display = 'none';
+  document.getElementById('result-card').style.display = 'none';
+  document.getElementById('skeleton-area').style.display = 'none';
+}
+
+async function uploadFile() {
+  if (!chosenFile) return;
+  const btn   = document.getElementById('btn-upload');
+  const badge = document.getElementById('upload-status-badge');
+  const msgEl = document.getElementById('upload-msg');
+  btn.disabled = true;
+  badge.textContent = 'Mengunggah...';
+  msgEl.style.display = 'none';
+  document.getElementById('skeleton-area').style.display = 'block';
+
+  try {
+    const fd = new FormData();
+    fd.append('file', chosenFile);
+    const res  = await fetch('/api/migrasi_stok/upload', { method: 'POST', body: fd });
+    const data = await res.json();
+    if (!data.ok) throw new Error(data.msg || 'Upload gagal');
+    badge.textContent = 'Menganalisa...';
+    await analyzeFile();
+  } catch (e) {
+    document.getElementById('skeleton-area').style.display = 'none';
+    msgEl.className = 'upload-msg err';
+    msgEl.textContent = '❌ Gagal mengunggah: ' + e.message;
+    msgEl.style.display = 'block';
+    badge.textContent = 'Gagal mengunggah';
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+// ── Mode toggle ──────────────────────────────────────────────
+document.querySelectorAll('.mode-opt').forEach(opt => {
+  opt.addEventListener('click', () => {
+    document.querySelectorAll('.mode-opt').forEach(o => o.classList.remove('active'));
+    opt.classList.add('active');
+    opt.querySelector('input[type=radio]').checked = true;
+  });
+});
+
+// ── Render mapping info ──────────────────────────────────────
+function renderMapList(items, type) {
+  if (!items || items.length === 0)
+    return '<div style="color:var(--text3);font-size:12px;font-style:italic;">Tidak ada</div>';
+  return items.map(item => {
+    if (type === 'mapped') {
+      return `<div class="map-item matched">
+        <span>${item.csv}</span>
+        <span class="map-arrow">→</span>
+        <span>${item.db}</span>
+      </div>`;
+    } else if (type === 'skipped') {
+      return `<div class="map-item skipped">${item}
+        <span style="font-size:10px;font-family:sans-serif;margin-left:4px;">(diabaikan)</span>
+      </div>`;
+    } else {
+      return `<div class="map-item missing">
+        <span style="opacity:.6;font-size:11px;">—</span>
+        <span class="map-arrow">→</span>
+        <span>${item}</span>
+        <span style="font-size:10px;font-family:sans-serif;margin-left:4px;">(default)</span>
+      </div>`;
+    }
+  }).join('');
+}
+
+function renderDefaultFields(missingCols, lokasiOptions, pemilikOptions) {
+  if (!missingCols || missingCols.length === 0) return '';
+  return missingCols.map(col => {
+    if (col === 'kd_lokasi') return renderDestChooser(lokasiOptions, pemilikOptions);
+    // kolom lain (jaga-jaga): input teks biasa
+    const id = `default_stok_${col}`;
+    return `<div class="field">
+      <label for="${id}">${col}</label>
+      <input type="text" id="${id}" data-col="${col}" value="">
+    </div>`;
+  }).join('');
+}
+
+// Pemilih tujuan stok: satu dropdown Kode Lokasi; bila INDUK → muncul dropdown Pemilik (induk mana).
+function renderDestChooser(lokasiOptions, pemilikOptions) {
+  const lokSel = ((lokasiOptions && lokasiOptions.length) ? lokasiOptions
+      : [{kd_lokasi:'INDUK', nm_lokasi:'Apotek Induk'}, {kd_lokasi:'CBG1', nm_lokasi:'Cabang Utama'}])
+    .map(l => `<option value="${l.kd_lokasi}"${l.kd_lokasi==='INDUK'?' selected':''}>${l.nm_lokasi} (${l.kd_lokasi})</option>`).join('');
+  const pemilikSel = ((pemilikOptions && pemilikOptions.length) ? pemilikOptions : [{kd_pemilik:'P1', nm_pemilik:'Induk Utama'}])
+    .map((p, i) => `<option value="${p.kd_pemilik}"${i===0?' selected':''}>${p.nm_pemilik} (${p.kd_pemilik})</option>`).join('');
+  return `<div class="field" style="grid-column:1/-1;">
+    <label for="default_stok_kd_lokasi">Tujuan Stok — Kode Lokasi (semua baris diimpor ke sini)</label>
+    <select id="default_stok_kd_lokasi" data-col="kd_lokasi" style="width:100%;max-width:340px;" onchange="stokToggleInduk(this)">${lokSel}</select>
+    <span class="hint">Sumber: master Lokasi. Bila memilih INDUK, tentukan induk milik siapa di bawah.</span>
+    <div id="stok-pemilik-wrap" style="margin-top:14px;">
+      <label for="sel-pemilik" style="font-size:11.5px;font-weight:600;color:var(--text2);display:block;margin-bottom:5px;">Induk Tujuan (Pemilik)</label>
+      <select id="sel-pemilik" style="width:100%;max-width:340px;">${pemilikSel}</select>
+      <span class="hint">Sumber: master Pemilik Induk. Beberapa induk dalam 1 gedung dibedakan oleh kepemilikan.</span>
+    </div>
+  </div>`;
+}
+
+// Dropdown bertingkat: Pemilik hanya muncul bila lokasi = INDUK.
+function stokToggleInduk(sel) {
+  const wrap = document.getElementById('stok-pemilik-wrap');
+  if (wrap) wrap.style.display = (sel.value === 'INDUK') ? '' : 'none';
+}
+
+function renderCard(data, lokasiOptions, pemilikOptions) {
+  if (data.error) {
+    return `<div class="section-card">
+      <div class="section-header">
+        <div class="section-title">📦 Tabel Stok_barang</div>
+        <span class="badge badge-rose">File tidak ditemukan</span>
+      </div>
+      <div class="section-body" style="color:var(--danger);font-size:13px;">${data.error}</div>
+    </div>`;
+  }
+
+  const rowCount     = (data.row_count || 0).toLocaleString('id');
+  const defaultFields = renderDefaultFields(data.missing_db || [], lokasiOptions, pemilikOptions);
+
+  return `<div class="section-card">
+    <div class="section-header">
+      <div>
+        <div class="section-title">📦 Tabel Stok_barang</div>
+        <div class="section-subtitle">${data.file}</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+        <span class="row-count">${rowCount} baris</span>
+        <span class="badge badge-teal">${(data.mapped||[]).length} kolom cocok</span>
+        ${(data.skipped_csv||[]).length ? `<span class="badge badge-rose">${data.skipped_csv.length} dilewati</span>` : ''}
+        ${(data.missing_db||[]).length  ? `<span class="badge badge-gold">${data.missing_db.length} butuh default</span>` : ''}
+      </div>
+    </div>
+    <div class="section-body">
+      <div class="map-grid">
+        <div class="map-col">
+          <h4>Kolom Cocok (auto-map)</h4>
+          <div class="map-list">${renderMapList(data.mapped, 'mapped')}</div>
+        </div>
+        <div>
+          ${(data.skipped_csv||[]).length ? `
+          <div class="map-col" style="margin-bottom:16px;">
+            <h4>Kolom Lama — Dilewati</h4>
+            <div class="map-list">${renderMapList(data.skipped_csv, 'skipped')}</div>
+          </div>` : ''}
+          ${(data.missing_db||[]).length ? `
+          <div class="map-col">
+            <h4>Kolom Baru — Butuh Default</h4>
+            <div class="map-list">${renderMapList(data.missing_db, 'missing')}</div>
+          </div>` : ''}
+        </div>
+      </div>
+    </div>
+    ${defaultFields ? `
+    <div class="defaults-section">
+      <div class="defaults-title">⚙️ Nilai Default untuk Kolom Baru</div>
+      <div class="defaults-grid">${defaultFields}</div>
+    </div>` : ''}
+  </div>`;
+}
+
+// ── Analisa file (ganti loadInfo() lama) ───────────────────────
+let _analyzeToken = 0;
+async function analyzeFile() {
+  const myToken = ++_analyzeToken;
+  try {
+    const res  = await fetch('/api/migrasi_stok/info');
+    const data = await res.json();
+    if (myToken !== _analyzeToken) return;
+    infoData = data;
+
+    const lokasiOptions  = infoData.lokasi_options  || [];
+    const pemilikOptions = infoData.pemilik_options || [];
+    const html = renderCard(infoData.stok_barang || {}, lokasiOptions, pemilikOptions);
+
+    document.getElementById('skeleton-area').style.display = 'none';
+    document.getElementById('content-area').innerHTML = html;
+    document.getElementById('content-area').style.display = 'block';
+    document.getElementById('mode-section').style.display = 'block';
+    document.getElementById('exec-section').style.display = 'block';
+    document.getElementById('upload-status-badge').textContent = 'Siap dieksekusi';
+    // Sinkron tampilan pemilik dgn lokasi default (INDUK → pemilik tampil)
+    const lokSel = document.getElementById('default_stok_kd_lokasi');
+    if (lokSel) stokToggleInduk(lokSel);
+  } catch (e) {
+    if (myToken !== _analyzeToken) return;
+    document.getElementById('skeleton-area').innerHTML =
+      `<div style="color:var(--danger);padding:24px;">Gagal menganalisa: ${e.message}</div>`;
+    document.getElementById('skeleton-area').style.display = 'block';
+  }
+}
+
+// ── Collect default values from form ────────────────────────
+function collectDefaults() {
+  const result = {};
+  document.querySelectorAll('[data-col]').forEach(el => {
+    result[el.dataset.col] = el.value;   // termasuk kd_lokasi dari dropdown
+  });
+  // Pemilik hanya berlaku bila tujuan = INDUK
+  const lok = document.getElementById('default_stok_kd_lokasi')?.value;
+  result.pemilik = (lok === 'INDUK') ? (document.getElementById('sel-pemilik')?.value || 'P1') : '';
+  return result;
+}
+
+// ── Execute migration — 1 panggilan, server baca file utuh dari sementara/ ───
+async function eksekusi() {
+  const btn       = document.getElementById('btn-exec');
+  const overlay   = document.getElementById('loading-overlay');
+  const resultEl  = document.getElementById('result-card');
+  const mode      = document.querySelector('input[name=mode]:checked')?.value || 'append';
+  const defaults  = collectDefaults();
+
+  btn.disabled = true;
+  btn.classList.add('loading');
+  overlay.classList.add('show');
+  document.getElementById('loading-sub').textContent = 'Membaca file & memasukkan data ke database';
+  resultEl.style.display = 'none';
+  resultEl.innerHTML = '';
+
+  try {
+    const res = await fetch('/api/migrasi_stok/eksekusi', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({ mode, defaults }),
+    });
+    const data = await res.json();
+    overlay.classList.remove('show');
+    btn.disabled = false;
+    btn.classList.remove('loading');
+    if (!data.ok) throw new Error(data.msg || 'Terjadi kesalahan tidak diketahui.');
+
+    resultEl.innerHTML = `
+      <div class="result-card result-success">
+        <div class="result-title">✅ Migrasi Berhasil!</div>
+        <div class="result-stats">
+          <div class="stat-box">
+            <div class="stat-num">${(data.inserted||0).toLocaleString('id')}</div>
+            <div class="stat-label">Baris diimpor</div>
+          </div>
+          <div class="stat-box stat-skip">
+            <div class="stat-num">${(data.skipped||0).toLocaleString('id')}</div>
+            <div class="stat-label">Baris dilewati</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-num">${(data.total||0).toLocaleString('id')}</div>
+            <div class="stat-label">Total diproses</div>
+          </div>
+        </div>
+      </div>`;
+    resultEl.style.display = 'block';
+    resultEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  } catch (e) {
+    overlay.classList.remove('show');
+    btn.disabled = false;
+    btn.classList.remove('loading');
+    resultEl.innerHTML = `
+      <div class="result-card result-error">
+        <div class="result-title">❌ Migrasi Gagal</div>
+        <div class="result-msg">${e.message}</div>
+      </div>`;
+    resultEl.style.display = 'block';
+  }
+}
+</script>
+</body>
+</html>

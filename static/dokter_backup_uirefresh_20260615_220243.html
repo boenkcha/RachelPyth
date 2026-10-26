@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Rachel Clinic — Portal Dokter</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@300;400;500;600&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:      #f5f1ea;
+  --bg2:     #ffffff;
+  --bg3:     #ede8df;
+  --bg4:     #e2dbd0;
+  --border:  rgba(90,60,15,0.10);
+  --border2: rgba(90,60,15,0.18);
+  --gold:    #946c0e;
+  --gold2:   #b88c2a;
+  --gold-dim: rgba(148,108,14,0.12);
+  --rose:    #b84252;
+  --rose-dim: rgba(184,66,82,0.12);
+  --teal:    #1a9d8e;
+  --teal-dim: rgba(26,157,142,0.13);
+  --text:    #1c1710;
+  --text2:   #4a3c28;
+  --text3:   #978268;
+  --danger:  #c0322a;
+  --success: #1c7a42;
+  --warning: #c4670a;
+  --radius:    12px;
+  --radius-sm: 8px;
+  --shadow: 0 2px 18px rgba(90,60,15,0.09);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;}
+
+/* ─── LOGIN ─────────────────────────── */
+#login-screen{
+  position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(135deg,#fdf9f0 0%,#f5ede0 40%,#ede4d4 100%);
+  background-image:
+    radial-gradient(ellipse at 15% 60%, rgba(148,108,14,0.10) 0%, transparent 55%),
+    radial-gradient(ellipse at 85% 15%, rgba(26,157,142,0.08) 0%, transparent 50%);
+}
+.login-card{width:380px;padding:48px 40px;background:#fff;border-radius:24px;text-align:center;
+  box-shadow:0 8px 48px rgba(90,60,15,0.14);border-top:4px solid var(--teal);}
+.login-logo{font-family:'Cormorant Garamond',serif;font-size:32px;font-weight:400;color:var(--teal);letter-spacing:3px;margin-bottom:4px;}
+.login-sub{font-size:10px;color:var(--text3);letter-spacing:4px;text-transform:uppercase;margin-bottom:36px;}
+.login-card input{width:100%;padding:12px 14px;background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--radius-sm);color:var(--text);font-size:14px;margin-bottom:10px;outline:none;transition:.2s;}
+.login-card input:focus{border-color:var(--teal);background:#fff;box-shadow:0 0 0 3px var(--teal-dim);}
+.btn-login{width:100%;padding:13px;background:linear-gradient(135deg,var(--teal),#15877a);
+  border:none;border-radius:var(--radius-sm);color:#fff;font-weight:600;font-size:14px;
+  cursor:pointer;letter-spacing:.5px;transition:.2s;margin-top:4px;}
+.btn-login:hover{opacity:.9;transform:translateY(-1px);}
+.login-err{color:var(--danger);font-size:12px;margin-top:8px;}
+
+/* ─── LAYOUT ────────────────────────── */
+#app{display:none;flex-direction:column;min-height:100vh;}
+.topbar{
+  background:var(--bg2);border-bottom:1px solid var(--border);
+  padding:14px 28px;display:flex;align-items:center;justify-content:space-between;
+  box-shadow:0 2px 10px rgba(90,60,15,0.06);
+}
+.topbar-brand{display:flex;align-items:center;gap:12px;}
+.brand-name{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:400;
+  background:linear-gradient(135deg,var(--teal),#15877a);
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;letter-spacing:2px;}
+.brand-portal{font-size:11px;color:var(--text3);letter-spacing:3px;text-transform:uppercase;}
+.topbar-right{display:flex;align-items:center;gap:14px;}
+.user-chip{display:flex;align-items:center;gap:8px;padding:6px 12px;
+  background:var(--teal-dim);border-radius:20px;}
+.user-chip .avatar{width:28px;height:28px;border-radius:50%;
+  background:linear-gradient(135deg,var(--teal),#15877a);
+  display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;}
+.user-chip .nm{font-size:13px;font-weight:500;color:var(--teal);}
+.btn-logout{padding:7px 14px;background:transparent;border:1px solid var(--border2);
+  border-radius:var(--radius-sm);color:var(--text2);font-size:12px;cursor:pointer;transition:.2s;}
+.btn-logout:hover{background:var(--rose-dim);border-color:var(--rose);color:var(--rose);}
+
+.main-wrap{display:flex;flex:1;gap:0;height:calc(100vh - 57px);}
+
+/* ─── LEFT PANEL ─────────────────────── */
+.panel-left{
+  width:300px;min-width:300px;background:var(--bg2);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.panel-left-head{padding:18px 18px 12px;border-bottom:1px solid var(--border);}
+.panel-left-head h2{font-size:14px;font-weight:600;color:var(--text2);margin-bottom:10px;}
+.search-wrap{position:relative;}
+.search-wrap input{
+  width:100%;padding:9px 12px 9px 34px;background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--radius-sm);font-size:13px;color:var(--text);outline:none;transition:.2s;
+}
+.search-wrap input:focus{border-color:var(--teal);background:#fff;}
+.search-wrap::before{content:'🔍';position:absolute;left:10px;top:50%;transform:translateY(-50%);font-size:12px;}
+.date-chip{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);margin-top:8px;}
+.date-chip input[type=date]{border:1px solid var(--border);border-radius:6px;padding:3px 8px;
+  font-size:11px;background:var(--bg3);color:var(--text);outline:none;}
+.date-chip input[type=date]:focus{border-color:var(--teal);}
+
+.pasien-list{flex:1;overflow-y:auto;padding:8px 0;}
+.pasien-row{
+  padding:11px 18px;cursor:pointer;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:10px;transition:.15s;
+}
+.pasien-row:hover{background:var(--gold-dim);}
+.pasien-row.active{background:var(--teal-dim);border-left:3px solid var(--teal);}
+.p-avatar{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--gold2));
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:#fff;flex-shrink:0;}
+.p-info{flex:1;min-width:0;}
+.p-name{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.p-meta{font-size:11px;color:var(--text3);margin-top:1px;}
+.p-badge{font-size:10px;padding:2px 7px;border-radius:10px;font-weight:600;flex-shrink:0;}
+.badge-rm{background:var(--teal-dim);color:var(--teal);}
+.badge-resep{background:var(--gold-dim);color:var(--gold);}
+.badge-wait{background:var(--bg3);color:var(--text3);}
+.empty-list{padding:32px 18px;text-align:center;color:var(--text3);font-size:13px;}
+
+/* ─── RIGHT PANEL ────────────────────── */
+.panel-right{flex:1;overflow-y:auto;padding:24px 28px;}
+
+.welcome-state{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  height:100%;text-align:center;color:var(--text3);
+}
+.welcome-state .icon{font-size:52px;margin-bottom:16px;}
+.welcome-state h3{font-size:17px;font-weight:500;color:var(--text2);margin-bottom:6px;}
+.welcome-state p{font-size:13px;line-height:1.6;}
+
+.pasien-card-header{
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+  padding:18px 20px;margin-bottom:18px;display:flex;align-items:center;gap:16px;
+  box-shadow:var(--shadow);
+}
+.pc-avatar{width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--gold),var(--rose));
+  display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:#fff;}
+.pc-info{flex:1;}
+.pc-name{font-size:17px;font-weight:600;color:var(--text);}
+.pc-meta{font-size:12px;color:var(--text3);margin-top:3px;}
+
+/* ─── SECTION CARD ───────────────────── */
+.section-card{
+  background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);
+  margin-bottom:18px;overflow:hidden;box-shadow:var(--shadow);
+}
+.section-head{
+  padding:14px 18px;display:flex;align-items:center;justify-content:space-between;
+  border-bottom:1px solid var(--border);background:var(--bg3);cursor:pointer;
+}
+.section-head h3{font-size:13px;font-weight:600;color:var(--text2);display:flex;align-items:center;gap:8px;}
+.section-body{padding:18px;}
+
+/* ─── RM FORM ────────────────────────── */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.form-group{display:flex;flex-direction:column;gap:5px;}
+.form-group.full{grid-column:1/-1;}
+.form-group label{font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;}
+.form-group input,.form-group select,.form-group textarea{
+  padding:9px 12px;background:var(--bg3);border:1px solid var(--border);
+  border-radius:var(--radius-sm);font-size:13px;color:var(--text);outline:none;
+  font-family:'DM Sans',sans-serif;transition:.2s;
+}
+.form-group input:focus,.form-group select:focus,.form-group textarea:focus{
+  border-color:var(--teal);background:#fff;box-shadow:0 0 0 3px var(--teal-dim);}
+.form-group textarea{min-height:70px;resize:vertical;}
+.soap-label{font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;
+  padding:2px 7px;border-radius:4px;margin-right:6px;}
+.soap-s{background:var(--rose-dim);color:var(--rose);}
+.soap-o{background:var(--gold-dim);color:var(--gold);}
+.soap-a{background:var(--teal-dim);color:var(--teal);}
+.soap-p{background:#e8eaf6;color:#3949ab;}
+
+/* ─── RESEP LIST ─────────────────────── */
+.resep-item{
+  border:1px solid var(--border);border-radius:var(--radius-sm);padding:14px 16px;
+  margin-bottom:10px;background:var(--bg3);
+}
+.resep-item-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.resep-nama{font-size:14px;font-weight:600;color:var(--teal);}
+.resep-harga{font-size:13px;font-weight:600;color:var(--text2);}
+.resep-cara{font-size:11px;color:var(--text3);margin-bottom:8px;}
+.bahan-list{display:flex;flex-direction:column;gap:4px;}
+.bahan-row{display:flex;align-items:center;justify-content:space-between;font-size:12px;color:var(--text2);}
+.bahan-row .bahan-nm{flex:1;}
+.bahan-row .bahan-qty{color:var(--text3);}
+.resep-actions{display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+
+/* ─── MODAL ──────────────────────────── */
+.modal-overlay{position:fixed;inset:0;background:rgba(28,23,16,.45);z-index:1000;
+  display:flex;align-items:center;justify-content:center;padding:20px;}
+.modal-box{background:var(--bg2);border-radius:var(--radius);box-shadow:0 8px 40px rgba(90,60,15,.18);
+  width:100%;max-width:560px;max-height:90vh;overflow-y:auto;}
+.modal-head{padding:18px 22px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.modal-head h3{font-size:15px;font-weight:600;color:var(--text);}
+.modal-close{width:28px;height:28px;border:none;background:var(--bg3);border-radius:50%;
+  cursor:pointer;font-size:16px;color:var(--text3);display:flex;align-items:center;justify-content:center;}
+.modal-close:hover{background:var(--rose-dim);color:var(--rose);}
+.modal-body{padding:22px;}
+.modal-foot{padding:14px 22px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;}
+
+/* ─── BAHAN ROWS ─────────────────────── */
+.bahan-input-list{display:flex;flex-direction:column;gap:8px;margin:12px 0;}
+.bahan-input-row{display:grid;grid-template-columns:1fr 80px 90px auto;gap:6px;align-items:center;}
+.bahan-input-row input,.bahan-input-row select{
+  padding:7px 10px;background:var(--bg3);border:1px solid var(--border);
+  border-radius:6px;font-size:12px;color:var(--text);outline:none;}
+.bahan-input-row input:focus,.bahan-input-row select:focus{border-color:var(--teal);background:#fff;}
+.btn-rm-bahan{width:26px;height:26px;border:none;border-radius:50%;background:var(--rose-dim);
+  color:var(--rose);cursor:pointer;font-size:14px;display:flex;align-items:center;justify-content:center;}
+.suggest-box-dokter{
+  position:absolute;top:100%;left:0;right:0;background:var(--bg2);
+  border:1px solid var(--border2);border-radius:var(--radius-sm);
+  box-shadow:var(--shadow);z-index:200;max-height:180px;overflow-y:auto;
+}
+.suggest-item-d{padding:9px 12px;cursor:pointer;font-size:13px;transition:.1s;}
+.suggest-item-d:hover{background:var(--teal-dim);}
+.suggest-item-d .si-nm{font-weight:500;color:var(--text);}
+.suggest-item-d .si-meta{font-size:11px;color:var(--text3);}
+
+/* ─── BUTTONS ────────────────────────── */
+.btn{padding:8px 16px;border:none;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;font-weight:500;transition:.2s;display:inline-flex;align-items:center;gap:6px;}
+.btn-teal{background:linear-gradient(135deg,var(--teal),#15877a);color:#fff;}
+.btn-teal:hover{opacity:.9;}
+.btn-gold{background:linear-gradient(135deg,var(--gold),var(--gold2));color:#fff;}
+.btn-gold:hover{opacity:.9;}
+.btn-ghost{background:var(--bg3);border:1px solid var(--border);color:var(--text2);}
+.btn-ghost:hover{border-color:var(--border2);background:var(--bg4);}
+.btn-danger{background:var(--rose-dim);color:var(--rose);border:1px solid transparent;}
+.btn-danger:hover{background:var(--rose);color:#fff;}
+.btn-sm{padding:5px 11px;font-size:12px;}
+.btn-add-resep{
+  width:100%;padding:11px;border:2px dashed var(--teal);border-radius:var(--radius-sm);
+  background:var(--teal-dim);color:var(--teal);font-size:13px;font-weight:500;
+  cursor:pointer;transition:.2s;display:flex;align-items:center;justify-content:center;gap:6px;
+}
+.btn-add-resep:hover{background:var(--teal);color:#fff;}
+
+/* ─── TOTAL ──────────────────────────── */
+.resep-total-row{display:flex;justify-content:space-between;padding:10px 0;
+  border-top:1px solid var(--border);margin-top:8px;font-weight:600;font-size:13px;}
+
+/* ─── NOTIF ──────────────────────────── */
+#notif-bar{position:fixed;top:18px;right:22px;z-index:9000;display:flex;flex-direction:column;gap:8px;}
+.notif-pill{
+  padding:10px 18px;border-radius:20px;font-size:13px;font-weight:500;
+  box-shadow:0 4px 18px rgba(0,0,0,.15);animation:slideIn .25s ease;
+}
+.notif-pill.success{background:var(--success);color:#fff;}
+.notif-pill.error{background:var(--danger);color:#fff;}
+.notif-pill.info{background:var(--teal);color:#fff;}
+@keyframes slideIn{from{opacity:0;transform:translateX(30px);}to{opacity:1;transform:translateX(0);}}
+
+/* ─── STATUS BADGES ──────────────────── */
+.status-dot{display:inline-block;width:7px;height:7px;border-radius:50%;margin-right:5px;}
+.dot-wait{background:var(--warning);}
+.dot-rm{background:var(--teal);}
+.dot-done{background:var(--success);}
+
+/* ─── RM EXISTING ────────────────────── */
+.rm-existing{background:var(--teal-dim);border:1px solid rgba(26,157,142,.2);
+  border-radius:var(--radius-sm);padding:12px 14px;margin-bottom:12px;}
+.rm-existing .rm-label{font-size:11px;font-weight:600;color:var(--teal);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+.rm-existing .rm-val{font-size:13px;color:var(--text2);}
+
+/* ─── RUNNING TOTAL ──────────────────── */
+.bahan-running-total{
+  text-align:right;font-size:12px;color:var(--text3);padding:6px 0 0;
+}
+.bahan-running-total strong{color:var(--teal);font-size:14px;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-card">
+    <div class="login-logo">Rachel</div>
+    <div class="login-sub">Portal Dokter</div>
+    <input id="l-user" type="text" placeholder="Username" autocomplete="username">
+    <input id="l-pass" type="password" placeholder="Password" autocomplete="current-password">
+    <button class="btn-login" onclick="doLogin()">Masuk</button>
+    <div class="login-err" id="l-err"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div>
+        <div class="brand-name">Rachel Clinic</div>
+        <div class="brand-portal">Portal Dokter</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="user-chip">
+        <div class="avatar" id="user-avatar">D</div>
+        <span class="nm" id="user-nama">Dokter</span>
+      </div>
+      <button class="btn-logout" onclick="doLogout()">Keluar</button>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main-wrap">
+    <!-- LEFT: daftar pasien -->
+    <div class="panel-left">
+      <div class="panel-left-head">
+        <h2>Daftar Pasien</h2>
+        <div class="search-wrap">
+          <input id="search-pasien" placeholder="Cari nama / kode..." oninput="searchPasien(this.value)">
+        </div>
+        <div class="date-chip">
+          Tanggal:
+          <input type="date" id="tgl-filter" onchange="loadPasienList()">
+        </div>
+      </div>
+      <div class="pasien-list" id="pasien-list">
+        <div class="empty-list">Memuat data...</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: detail pasien / RM / resep -->
+    <div class="panel-right" id="panel-right">
+      <div class="welcome-state">
+        <div class="icon">🩺</div>
+        <h3>Pilih Pasien</h3>
+        <p>Pilih pasien dari daftar kiri<br>untuk mengisi Rekam Medik dan Resep Digital.</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL RACIKAN DOKTER -->
+<div class="modal-overlay" id="modal-resep" style="display:none;">
+  <div class="modal-box">
+    <div class="modal-head">
+      <h3 id="resep-modal-title">Tulis Resep Baru</h3>
+      <button class="modal-close" onclick="closeModalResep()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group" style="margin-bottom:14px;">
+        <label>Cara Pakai</label>
+        <input id="resep-cara-pakai" placeholder="Contoh: Oleskan tipis malam hari...">
+      </div>
+      <div class="form-group" style="margin-bottom:14px;">
+        <label>Catatan untuk Kasir <span style="font-weight:400;color:var(--text3);">(opsional)</span></label>
+        <input id="resep-catatan-kasir" placeholder="Contoh: Untuk kulit berminyak, gunakan sebelum tidur...">
+      </div>
+      <label style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.5px;">Bahan-Bahan</label>
+      <div class="bahan-input-list" id="bahan-input-list"></div>
+      <div style="position:relative;">
+        <div class="search-wrap" style="margin-bottom:8px;">
+          <input id="bahan-cari" placeholder="Cari bahan & tambahkan..." oninput="suggestBahanDokter(this.value)" autocomplete="off">
+        </div>
+        <div class="suggest-box-dokter" id="bahan-suggest-box" style="display:none;"></div>
+      </div>
+      <div class="bahan-running-total" id="resep-running-total">Total: <strong>Rp 0</strong></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn btn-ghost" onclick="closeModalResep()">Batal</button>
+      <button class="btn btn-teal" onclick="simpanResepDraft()">💾 Simpan Resep</button>
+    </div>
+  </div>
+</div>
+
+<!-- NOTIF -->
+<div id="notif-bar"></div>
+
+<script>
+const API = '';
+let currentUser = null;
+let selectedPasien = null;
+let currentRM = null;
+let resepList = [];
+let bahanListModal = [];
+let _editingResepId = null;
+
+// ─── UTILS ────────────────────────────────────────────
+const $ = id => document.getElementById(id);
+// Tanggal LOKAL sistem → 'YYYY-MM-DD' (hindari toISOString/UTC).
+function localDate(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function todayLocal() { return localDate(); }
+function fmt(n){ return 'Rp ' + Math.round(n||0).toLocaleString('id-ID'); }
+
+async function api(path, opts={}) {
+  const res = await fetch(API + path, {
+    method: opts.method || 'GET',
+    headers: opts.body ? {'Content-Type':'application/json'} : {},
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  });
+  try { return await res.json(); } catch { return {}; }
+}
+
+function notif(msg, type='success') {
+  const bar = $('notif-bar');
+  const el = document.createElement('div');
+  el.className = `notif-pill ${type}`;
+  el.textContent = msg;
+  bar.appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}
+
+// ─── AUTH ─────────────────────────────────────────────
+async function doLogin() {
+  const u = $('l-user').value, p = $('l-pass').value;
+  if (!u || !p) { $('l-err').textContent = 'Username dan password wajib diisi'; return; }
+  const res = await api('/api/login', {method:'POST', body:{username:u, password:p}});
+  if (res.ok) {
+    const role = res.user.role;
+    if (role !== 'dokter' && role !== 'admin') {
+      $('l-err').textContent = 'Akun ini tidak memiliki akses portal dokter';
+      return;
+    }
+    currentUser = res.user;
+    $('login-screen').style.display = 'none';
+    $('app').style.display = 'flex';
+    $('user-nama').textContent = res.user.nama;
+    $('user-avatar').textContent = res.user.nama[0].toUpperCase();
+    initPage();
+  } else {
+    $('l-err').textContent = res.msg || 'Login gagal';
+  }
+}
+
+$('l-pass').addEventListener('keydown', e => e.key === 'Enter' && doLogin());
+$('l-user').addEventListener('keydown', e => e.key === 'Enter' && $('l-pass').focus());
+
+function doLogout() {
+  currentUser = null;
+  selectedPasien = null;
+  currentRM = null;
+  $('app').style.display = 'none';
+  $('login-screen').style.display = 'flex';
+  $('l-user').value = '';
+  $('l-pass').value = '';
+  $('l-err').textContent = '';
+}
+
+// ─── INIT ─────────────────────────────────────────────
+function initPage() {
+  const today = todayLocal();
+  $('tgl-filter').value = today;
+  loadPasienList();
+}
+
+// ─── PASIEN LIST ──────────────────────────────────────
+let _searchTimer = null;
+function searchPasien(q) {
+  clearTimeout(_searchTimer);
+  _searchTimer = setTimeout(() => loadPasienList(q), 280);
+}
+
+async function loadPasienList(q='') {
+  const tgl = $('tgl-filter').value;
+  const el = $('pasien-list');
+
+  // Ambil antrian hari itu
+  let antrian = await api(`/api/antrian?tanggal=${tgl}`);
+  if (!Array.isArray(antrian)) antrian = [];
+
+  // Jika ada query cari, juga load dari pasien search
+  let extraPasien = [];
+  if (q.trim().length >= 2) {
+    const found = await api(`/api/pasien?q=${encodeURIComponent(q)}`);
+    if (Array.isArray(found)) extraPasien = found;
+  }
+
+  // Merge: antrian + extra (deduplikasi)
+  const antrianKd = new Set(antrian.map(a => a.kd_pasien));
+  for (const p of extraPasien) {
+    if (!antrianKd.has(p.kd_pasien)) {
+      antrian.push({ kd_pasien: p.kd_pasien, nm_pasien: p.nm_pasien, status: 'search' });
+    }
+  }
+
+  // Filter by query pada antrian
+  let rows = antrian;
+  if (q.trim()) {
+    const ql = q.toLowerCase();
+    rows = antrian.filter(r =>
+      (r.nm_pasien||'').toLowerCase().includes(ql) || (r.kd_pasien||'').toLowerCase().includes(ql)
+    );
+  }
+
+  if (!rows.length) {
+    el.innerHTML = '<div class="empty-list">Tidak ada pasien' + (q ? ` untuk "${q}"` : ' hari ini') + '</div>';
+    return;
+  }
+
+  el.innerHTML = rows.map(r => `
+    <div class="pasien-row ${selectedPasien?.kd_pasien === r.kd_pasien ? 'active' : ''}"
+         onclick="pilihPasien('${r.kd_pasien}')">
+      <div class="p-avatar">${(r.nm_pasien||'?')[0].toUpperCase()}</div>
+      <div class="p-info">
+        <div class="p-name">${r.nm_pasien || r.kd_pasien}</div>
+        <div class="p-meta">${r.kd_pasien}</div>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ─── PILIH PASIEN ─────────────────────────────────────
+async function pilihPasien(kd_pasien) {
+  const pasien = await api(`/api/pasien/${kd_pasien}`);
+  if (pasien.error) { notif('Pasien tidak ditemukan', 'error'); return; }
+  selectedPasien = pasien;
+
+  // Update active state di list
+  document.querySelectorAll('.pasien-row').forEach(r => r.classList.remove('active'));
+  document.querySelectorAll('.pasien-row').forEach(r => {
+    if (r.textContent.includes(kd_pasien)) r.classList.add('active');
+  });
+
+  await renderPasienDetail();
+}
+
+async function renderPasienDetail() {
+  const p = selectedPasien;
+  if (!p) return;
+
+  const tgl = $('tgl-filter').value;
+
+  // Cek RM hari ini
+  currentRM = await api(`/api/rekam-medik/today/${p.kd_pasien}`);
+
+  // Ambil daftar resep draft hari ini
+  resepList = await api(`/api/resep-draft/${p.kd_pasien}?tanggal=${tgl}`) || [];
+
+  const panel = $('panel-right');
+  panel.innerHTML = `
+    <!-- HEADER PASIEN -->
+    <div class="pasien-card-header">
+      <div class="pc-avatar">${p.nm_pasien[0].toUpperCase()}</div>
+      <div class="pc-info">
+        <div class="pc-name">${p.nm_pasien}</div>
+        <div class="pc-meta">${p.kd_pasien} · ${p.jenis_kelamin==='P'?'Perempuan':'Laki-laki'} · ${p.telp||'—'}</div>
+      </div>
+    </div>
+
+    <!-- REKAM MEDIK -->
+    <div class="section-card">
+      <div class="section-head" onclick="toggleSection('rm-body')">
+        <h3>📋 Rekam Medik ${currentRM ? '<span style="font-size:10px;padding:2px 8px;background:var(--teal-dim);color:var(--teal);border-radius:10px;margin-left:6px;">Sudah ada</span>' : '<span style="font-size:10px;padding:2px 8px;background:var(--gold-dim);color:var(--gold);border-radius:10px;margin-left:6px;">Belum diisi</span>'}</h3>
+        <span style="font-size:16px;color:var(--text3);" id="rm-chevron">▾</span>
+      </div>
+      <div class="section-body" id="rm-body">
+        ${currentRM ? renderRMExisting() : ''}
+        <div class="form-grid" id="rm-form-grid">
+          <div class="form-group full">
+            <label><span class="soap-label soap-s">S</span> Keluhan Pasien</label>
+            <textarea id="rm-keluhan" placeholder="Keluhan yang disampaikan pasien...">${currentRM?.S_keluhan||''}</textarea>
+          </div>
+          <div class="form-group">
+            <label><span class="soap-label soap-o">O</span> Jenis Kulit</label>
+            <select id="rm-jenis-kulit">
+              <option value="">— Pilih —</option>
+              ${['Normal','Kering','Berminyak','Kombinasi','Sensitif'].map(v=>`<option value="${v}" ${currentRM?.O_jenis_kulit===v?'selected':''}>${v}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group">
+            <label><span class="soap-label soap-o">O</span> Kondisi Kulit</label>
+            <input id="rm-kondisi" value="${currentRM?.O_kondisi_kulit||''}" placeholder="Temuan klinis...">
+          </div>
+          <div class="form-group full">
+            <label><span class="soap-label soap-a">A</span> Diagnosa</label>
+            <input id="rm-diagnosa" value="${currentRM?.A_diagnosa||''}" placeholder="Diagnosa dokter...">
+          </div>
+          <div class="form-group full">
+            <label><span class="soap-label soap-p">P</span> Rencana Tindakan</label>
+            <textarea id="rm-tindakan" placeholder="Tindakan yang akan dilakukan...">${currentRM?.P_tindakan||''}</textarea>
+          </div>
+          <div class="form-group full">
+            <label><span class="soap-label soap-p">P</span> Catatan Tambahan</label>
+            <textarea id="rm-catatan" placeholder="Catatan lain, saran perawatan rumah...">${currentRM?.P_catatan||''}</textarea>
+          </div>
+          <div class="form-group full" style="display:flex;justify-content:flex-end;gap:8px;">
+            <button class="btn btn-teal" onclick="simpanRM()">${currentRM ? '💾 Perbarui RM' : '+ Buat Rekam Medik'}</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- RESEP DIGITAL -->
+    <div class="section-card">
+      <div class="section-head">
+        <h3>💊 Resep Digital <span style="font-size:10px;padding:2px 8px;background:var(--teal-dim);color:var(--teal);border-radius:10px;margin-left:6px;">${resepList.length} resep</span></h3>
+        <span style="font-size:11px;color:var(--text3);">Menunggu konfirmasi kasir</span>
+      </div>
+      <div class="section-body">
+        <div id="resep-list-area">${renderResepList()}</div>
+        <button class="btn-add-resep" onclick="bukaModalResep()" ${!currentRM ? 'disabled title="Buat rekam medik dulu"' : ''}>
+          + Tambah Resep
+        </button>
+        ${!currentRM ? '<div style="font-size:11px;color:var(--warning);text-align:center;margin-top:6px;">Buat Rekam Medik terlebih dahulu untuk menambah resep</div>' : ''}
+      </div>
+    </div>
+  `;
+}
+
+function renderRMExisting() {
+  const rm = currentRM;
+  if (!rm) return '';
+  return `<div class="rm-existing">
+    <div class="rm-label">RM tersimpan: ${rm.no_rm}</div>
+    <div class="rm-val" style="font-style:italic;color:var(--text3);">
+      Form di bawah menampilkan data yang sudah ada — edit lalu simpan untuk memperbarui.
+    </div>
+  </div>`;
+}
+
+function renderResepList() {
+  if (!resepList.length) return '<div style="font-size:13px;color:var(--text3);text-align:center;padding:16px 0;">Belum ada resep untuk pasien ini</div>';
+  return resepList.map((r, i) => `
+    <div class="resep-item" id="resep-item-${r.id}">
+      <div class="resep-item-head">
+        <div class="resep-nama">📋 Resep #${i+1}</div>
+        <div class="resep-harga">${fmt(r.harga_total)}</div>
+      </div>
+      ${r.cara_pakai ? `<div class="resep-cara">📝 Cara pakai: ${r.cara_pakai}</div>` : ''}
+      ${r.catatan_kasir ? `<div class="resep-cara" style="color:var(--warning);">💬 Catatan: ${r.catatan_kasir}</div>` : ''}
+      <div class="bahan-list">
+        ${(r.bahans||[]).map(b=>`
+          <div class="bahan-row">
+            <span class="bahan-nm">${b.nm_bahan}</span>
+            <span class="bahan-qty">${b.qty} ${b.satuan} · ${fmt(b.sub_total)}</span>
+          </div>
+        `).join('')}
+      </div>
+      <div style="font-size:10px;color:var(--text3);font-style:italic;margin-top:6px;padding-top:6px;border-top:1px dashed var(--border);">
+        Nama produk ditentukan oleh kasir saat memuat resep ini ke transaksi
+      </div>
+      <div class="resep-actions">
+        <button class="btn btn-ghost btn-sm" onclick="editResepDraft(${r.id})">✏️ Edit</button>
+        <button class="btn btn-danger btn-sm" onclick="hapusResepDraft(${r.id})">🗑 Hapus</button>
+        <div style="flex:1;"></div>
+        <span style="font-size:11px;color:var(--text3);">dr. ${r.nm_dokter||currentUser?.nama||'—'}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+function toggleSection(id) {
+  const el = $(id);
+  if (!el) return;
+  const hidden = el.style.display === 'none';
+  el.style.display = hidden ? '' : 'none';
+}
+
+// ─── REKAM MEDIK ──────────────────────────────────────
+async function simpanRM() {
+  const p = selectedPasien;
+  if (!p) return;
+  const body = {
+    kd_pasien:       p.kd_pasien,
+    nm_dokter:       currentUser?.nama || '',
+    S_keluhan:       $('rm-keluhan')?.value || '',
+    O_jenis_kulit:   $('rm-jenis-kulit')?.value || '',
+    O_kondisi_kulit: $('rm-kondisi')?.value || '',
+    A_diagnosa:      $('rm-diagnosa')?.value || '',
+    P_tindakan:      $('rm-tindakan')?.value || '',
+    P_catatan:       $('rm-catatan')?.value || '',
+  };
+  let res;
+  if (currentRM?.id) {
+    res = await api(`/api/rekam-medik/${currentRM.id}`, {method:'PUT', body});
+  } else {
+    res = await api('/api/rekam-medik', {method:'POST', body});
+  }
+  if (res && (res.ok !== false)) {
+    notif('Rekam medik disimpan', 'success');
+    currentRM = res.id ? res : await api(`/api/rekam-medik/today/${p.kd_pasien}`);
+    // Refresh resep area untuk enable tombol "Tambah Resep"
+    await renderPasienDetail();
+  } else {
+    notif('Gagal menyimpan rekam medik', 'error');
+  }
+}
+
+// ─── MODAL RESEP ──────────────────────────────────────
+function bukaModalResep() {
+  if (!currentRM) { notif('Buat rekam medik dulu', 'error'); return; }
+  _editingResepId = null;
+  bahanListModal = [];
+  $('resep-modal-title').textContent = 'Tulis Resep Baru';
+  $('resep-cara-pakai').value = '';
+  $('resep-catatan-kasir').value = '';
+  renderBahanInputList();
+  $('modal-resep').style.display = 'flex';
+  setTimeout(() => $('resep-cara-pakai').focus(), 150);
+}
+
+function editResepDraft(id) {
+  const r = resepList.find(x => x.id === id);
+  if (!r) return;
+  _editingResepId = id;
+  bahanListModal = (r.bahans || []).map(b => ({...b}));
+  $('resep-modal-title').textContent = `Edit Resep #${resepList.indexOf(r)+1}`;
+  $('resep-cara-pakai').value = r.cara_pakai || '';
+  $('resep-catatan-kasir').value = r.catatan_kasir || '';
+  renderBahanInputList();
+  updateRunningTotal();
+  $('modal-resep').style.display = 'flex';
+}
+
+function closeModalResep() {
+  $('modal-resep').style.display = 'none';
+  $('bahan-suggest-box').style.display = 'none';
+}
+
+// ─── BAHAN SUGGEST ────────────────────────────────────
+let _bahanTimer = null;
+function suggestBahanDokter(q) {
+  clearTimeout(_bahanTimer);
+  if (!q.trim()) { $('bahan-suggest-box').style.display = 'none'; return; }
+  _bahanTimer = setTimeout(async () => {
+    const rows = await api(`/api/bahan-racikan?q=${encodeURIComponent(q)}`);
+    const box = $('bahan-suggest-box');
+    if (!rows || !rows.length) { box.style.display = 'none'; return; }
+    box.innerHTML = rows.slice(0,8).map(b => `
+      <div class="suggest-item-d" onclick='pilihBahanDokter(${JSON.stringify(b).replace(/'/g,"&#39;")})'>
+        <div class="si-nm">${b.nm_barang}</div>
+        <div class="si-meta">${b.kd_barang} · stok ${b.stok_sisa} ${b.satuan||''} · Exp ${b.exp||'—'}</div>
+      </div>
+    `).join('');
+    box.style.display = 'block';
+  }, 250);
+}
+
+function pilihBahanDokter(b) {
+  bahanListModal.push({
+    kd_barang: b.kd_barang,
+    nm_bahan:  b.nm_barang,
+    qty:       1,
+    satuan:    b.satuan || '',
+    harga_satuan: b.harga || 0,
+    sub_total: b.harga || 0,
+    exp:       b.exp || ''
+  });
+  $('bahan-cari').value = '';
+  $('bahan-suggest-box').style.display = 'none';
+  renderBahanInputList();
+  updateRunningTotal();
+}
+
+function hapusBahanRow(idx) {
+  bahanListModal.splice(idx, 1);
+  renderBahanInputList();
+  updateRunningTotal();
+}
+
+function bahanQtyChange(idx, val) {
+  bahanListModal[idx].qty = parseFloat(val) || 0;
+  bahanListModal[idx].sub_total = bahanListModal[idx].harga_satuan * bahanListModal[idx].qty;
+  updateRunningTotal();
+}
+
+function renderBahanInputList() {
+  const el = $('bahan-input-list');
+  if (!bahanListModal.length) {
+    el.innerHTML = '<div style="font-size:12px;color:var(--text3);padding:6px 0;">Belum ada bahan — cari di bawah</div>';
+    return;
+  }
+  el.innerHTML = bahanListModal.map((b, i) => `
+    <div class="bahan-input-row">
+      <div style="font-size:12px;color:var(--text2);padding:4px 0;">${b.nm_bahan}<br><span style="font-size:10px;color:var(--text3);">${fmt(b.harga_satuan)}/${b.satuan||'pcs'}</span></div>
+      <input type="number" min="0.1" step="0.5" value="${b.qty}"
+             oninput="bahanQtyChange(${i}, this.value)" style="text-align:center;">
+      <div style="font-size:12px;font-weight:500;text-align:right;color:var(--teal);">${fmt(b.harga_satuan * b.qty)}</div>
+      <button class="btn-rm-bahan" onclick="hapusBahanRow(${i})">×</button>
+    </div>
+  `).join('');
+}
+
+function updateRunningTotal() {
+  const total = bahanListModal.reduce((s,b) => s + (b.harga_satuan * b.qty), 0);
+  $('resep-running-total').innerHTML = `Total: <strong>${fmt(total)}</strong>`;
+}
+
+// ─── SIMPAN / EDIT RESEP DRAFT ────────────────────────
+async function simpanResepDraft() {
+  if (!currentRM) { notif('Rekam medik belum ada', 'error'); return; }
+  if (!bahanListModal.length) { notif('Tambahkan minimal 1 bahan', 'error'); return; }
+
+  const body = {
+    id_rm:          currentRM.id,
+    kd_pasien:      selectedPasien.kd_pasien,
+    nama_produk:    '',
+    cara_pakai:     $('resep-cara-pakai').value.trim(),
+    catatan_kasir:  $('resep-catatan-kasir').value.trim(),
+    bahans:         bahanListModal,
+    created_by:     currentUser?.nama || ''
+  };
+
+  let res;
+  if (_editingResepId) {
+    res = await api(`/api/racikan-draft/${_editingResepId}`, {method:'PUT', body});
+  } else {
+    res = await api('/api/racikan-draft', {method:'POST', body});
+  }
+
+  if (res.ok) {
+    notif(_editingResepId ? 'Resep diperbarui' : 'Resep disimpan — menunggu konfirmasi kasir', 'success');
+    closeModalResep();
+    // Refresh resep list
+    resepList = await api(`/api/resep-draft/${selectedPasien.kd_pasien}`) || [];
+    $('resep-list-area').innerHTML = renderResepList();
+  } else {
+    notif(res.msg || 'Gagal menyimpan resep', 'error');
+  }
+}
+
+async function hapusResepDraft(id) {
+  if (!confirm('Hapus resep ini?')) return;
+  const res = await api(`/api/racikan-draft/${id}`, {method:'DELETE'});
+  if (res.ok) {
+    notif('Resep dihapus', 'success');
+    resepList = resepList.filter(r => r.id !== id);
+    $('resep-list-area').innerHTML = renderResepList();
+  } else {
+    notif(res.msg || 'Gagal menghapus', 'error');
+  }
+}
+
+// ─── ANTRIAN API ──────────────────────────────────────
+// Gunakan endpoint pasien dengan fallback jika antrian belum mendukung filter tanggal
+document.addEventListener('click', e => {
+  if (!e.target.closest('#bahan-suggest-box') && !e.target.closest('#bahan-cari')) {
+    $('bahan-suggest-box').style.display = 'none';
+  }
+});
+</script>
+</body>
+</html>

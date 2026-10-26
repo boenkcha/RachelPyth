@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>POS Refresh — Mockup Pastel · Rachel Clinic</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600&family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  /* ── pastel warm palette ── */
+  --bg:#f9f4ef;            /* soft warm cream */
+  --bg2:#fffdfb;           /* near-white warm */
+  --bg-soft:#f4ece4;       /* gentle tint */
+  --card:#fffefc;
+  --line:rgba(150,120,80,0.08);   /* almost-invisible hairline */
+
+  --gold:#b08a44;          /* readable gold text */
+  --gold-soft:#f3e8d2;     /* pastel gold fill */
+  --gold-soft2:#ecdcbe;
+  --rose:#cf8595;          /* dusty rose */
+  --rose-soft:#f8e6ea;     /* pastel rose fill */
+  --mint:#62b3a3;          /* soft teal/mint */
+  --mint-soft:#e0f1ec;     /* pastel mint fill */
+  --lav:#9b8bc4;           /* gentle lavender accent */
+  --lav-soft:#ece8f6;
+
+  --text:#3a302420;        /* placeholder, overwritten below */
+  --text:#463a2c;          /* warm dark, softer than black */
+  --text2:#6f6051;
+  --text3:#a89c8c;
+  --success:#5a9a72;
+  --danger:#cf8585;
+
+  --radius:20px;
+  --radius-sm:14px;
+  --pill:40px;
+  --shadow-soft:0 10px 34px rgba(150,115,65,0.07);
+  --shadow-card:0 6px 20px rgba(150,115,65,0.06);
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{font-family:'DM Sans',sans-serif;background:
+  radial-gradient(1200px 600px at 80% -10%, #fdf6ee 0%, transparent 60%),
+  radial-gradient(900px 500px at -10% 110%, #fbeef0 0%, transparent 55%),
+  var(--bg);
+  color:var(--text);min-height:100vh;}
+
+/* ── faux topbar ── */
+.topbar{height:60px;background:rgba(255,253,251,0.8);backdrop-filter:blur(10px);
+  border-bottom:1px solid var(--line);display:flex;align-items:center;gap:15px;padding:0 26px;position:sticky;top:0;z-index:20;}
+.brand{font-family:'Cormorant Garamond',serif;font-size:23px;letter-spacing:3px;
+  background:linear-gradient(120deg,var(--gold),var(--rose));-webkit-background-clip:text;background-clip:text;color:transparent;}
+.tb-title{font-size:13px;color:var(--text3);letter-spacing:.5px;}
+.tb-spacer{flex:1;}
+.tb-user{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text2);}
+.tb-ava{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--gold-soft2),var(--rose-soft));
+  display:flex;align-items:center;justify-content:center;color:var(--gold);font-weight:600;font-size:13px;}
+
+/* ── POS layout ── */
+#pos-layout{display:grid;grid-template-columns:1fr 380px;height:calc(100vh - 60px);}
+#pos-left{padding:22px 26px;overflow-y:auto;}
+#pos-right{display:flex;flex-direction:column;background:rgba(255,254,252,0.7);
+  border-left:1px solid var(--line);margin:14px 14px 14px 0;border-radius:var(--radius);box-shadow:var(--shadow-soft);overflow:hidden;}
+
+/* context bar */
+.pos-ctx{display:flex;align-items:center;gap:11px;margin-bottom:20px;flex-wrap:wrap;}
+.pos-faktur{font-family:'DM Mono',monospace;font-size:13px;color:var(--gold);
+  background:var(--gold-soft);padding:9px 16px;border-radius:var(--pill);display:flex;align-items:center;gap:8px;}
+.pos-faktur::before{content:"❋";font-size:11px;opacity:.6;}
+.ctx-chip{font-size:12px;color:var(--text2);background:var(--bg2);
+  padding:8px 14px;border-radius:var(--pill);display:flex;align-items:center;gap:6px;box-shadow:var(--shadow-card);}
+.ctx-chip b{color:var(--text);font-weight:600;}
+.ctx-spacer{flex:1;}
+.btn{display:inline-flex;align-items:center;gap:7px;border-radius:var(--pill);font-size:13px;font-weight:500;
+  padding:10px 18px;cursor:pointer;border:none;font-family:'DM Sans';transition:.2s;letter-spacing:.2px;}
+.btn-sm{padding:8px 15px;font-size:12px;}
+.btn-ghost{background:var(--bg2);color:var(--text2);box-shadow:var(--shadow-card);}
+.btn-ghost:hover{color:var(--text);transform:translateY(-1px);}
+.btn-rose{background:var(--rose-soft);color:var(--rose);}
+.btn-rose:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(207,133,149,.2);}
+
+/* ── stepper ── */
+.stepper{display:flex;align-items:center;margin-bottom:22px;background:var(--bg2);
+  border-radius:var(--pill);padding:8px;box-shadow:var(--shadow-soft);}
+.step{flex:1;display:flex;align-items:center;gap:11px;padding:10px 18px;border-radius:var(--pill);transition:.2s;}
+.step.done{background:var(--mint-soft);}
+.step.current{background:var(--gold-soft);}
+.step-num{width:30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:700;flex-shrink:0;background:var(--bg-soft);color:var(--text3);}
+.step.done .step-num{background:linear-gradient(135deg,#7cc3b2,var(--mint));color:#fff;}
+.step.current .step-num{background:linear-gradient(135deg,var(--gold-soft2),var(--gold));color:#fff;}
+.step-txt small{display:block;font-size:9.5px;letter-spacing:1.5px;text-transform:uppercase;color:var(--text3);}
+.step-txt span{font-size:13.5px;font-weight:600;color:var(--text);}
+.step.done .step-txt span{color:var(--mint);}
+.step.current .step-txt span{color:var(--gold);}
+.step-arrow{color:var(--text3);font-size:16px;padding:0 6px;opacity:.35;}
+
+/* ── patient card ── */
+.pasien-card{background:linear-gradient(120deg,#fffefc,var(--rose-soft) 130%);
+  border-radius:var(--radius);padding:18px 20px;margin-bottom:18px;display:flex;align-items:center;gap:17px;
+  box-shadow:var(--shadow-soft);}
+.pasien-avatar{width:54px;height:54px;border-radius:50%;background:linear-gradient(135deg,var(--gold-soft2),var(--rose));
+  display:flex;align-items:center;justify-content:center;font-family:'Cormorant Garamond',serif;
+  font-size:22px;color:#fff;font-weight:600;flex-shrink:0;box-shadow:0 4px 14px rgba(207,133,149,.28);}
+.pasien-info{flex:1;min-width:0;}
+.pasien-name{font-size:17px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:9px;}
+.tag-vip{font-size:9px;letter-spacing:1px;background:var(--gold-soft);color:var(--gold);padding:3px 9px;border-radius:var(--pill);font-weight:700;}
+.pasien-meta{font-size:12px;color:var(--text3);margin-top:5px;display:flex;gap:14px;flex-wrap:wrap;}
+.pasien-meta b{color:var(--text2);font-weight:500;}
+.pasien-actions{display:flex;flex-direction:column;gap:9px;align-items:flex-end;}
+.pasien-point{font-family:'DM Mono',monospace;font-size:13px;color:var(--gold);font-weight:500;
+  background:var(--gold-soft);padding:6px 14px;border-radius:var(--pill);white-space:nowrap;}
+.mini-actions{display:flex;gap:7px;}
+.mini-btn{font-size:11px;padding:6px 12px;border-radius:var(--pill);background:var(--bg2);
+  color:var(--text2);cursor:pointer;transition:.18s;box-shadow:var(--shadow-card);border:none;}
+.mini-btn:hover{color:var(--gold);transform:translateY(-1px);}
+
+/* RM status */
+.rm-status{display:flex;align-items:center;gap:13px;background:var(--mint-soft);
+  border-radius:var(--radius);padding:14px 18px;margin-bottom:22px;}
+.rm-status .ic{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#7cc3b2,var(--mint));color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;box-shadow:0 4px 12px rgba(98,179,163,.3);}
+.rm-status .tx{flex:1;}
+.rm-status .tx b{font-size:13px;color:var(--mint);}
+.rm-status .tx small{display:block;font-size:11px;color:var(--text2);margin-top:2px;}
+
+/* ── product area ── */
+.search-row{display:flex;align-items:center;gap:10px;margin-bottom:16px;}
+.search-wrap{flex:1;position:relative;}
+.search-wrap input{width:100%;padding:13px 16px 13px 42px;background:var(--bg2);border:none;
+  border-radius:var(--pill);color:var(--text);font-family:'DM Sans';font-size:13px;outline:none;transition:.2s;box-shadow:var(--shadow-card);}
+.search-wrap input:focus{box-shadow:0 0 0 3px var(--gold-soft),var(--shadow-card);}
+.search-wrap .si{position:absolute;left:16px;top:50%;transform:translateY(-50%);opacity:.4;font-size:14px;}
+.btn-racikan{background:var(--mint-soft);color:var(--mint);border:none;
+  padding:13px 16px;border-radius:var(--pill);font-size:13px;font-weight:600;cursor:pointer;
+  font-family:'DM Sans';display:flex;align-items:center;gap:6px;transition:.18s;}
+.btn-racikan:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(98,179,163,.2);}
+.btn-resep{background:var(--gold-soft);color:var(--gold);border:none;
+  padding:13px 16px;border-radius:var(--pill);font-size:13px;font-weight:600;cursor:pointer;
+  font-family:'DM Sans';display:flex;align-items:center;gap:6px;transition:.18s;}
+.btn-resep:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(176,138,68,.18);}
+
+.tabs{display:flex;gap:5px;margin-bottom:18px;background:var(--bg-soft);padding:5px;border-radius:var(--pill);width:fit-content;}
+.tab{padding:9px 20px;border-radius:var(--pill);font-size:13px;cursor:pointer;transition:.2s;color:var(--text2);font-weight:500;
+  display:flex;align-items:center;gap:8px;}
+.tab.active{background:var(--bg2);color:var(--gold);box-shadow:var(--shadow-card);}
+.tab:hover:not(.active){color:var(--text);}
+.tab .cnt{font-size:11px;background:rgba(176,138,68,.1);color:var(--text3);padding:1px 8px;border-radius:var(--pill);font-family:'DM Mono';}
+.tab.active .cnt{background:var(--gold-soft);color:var(--gold);}
+
+.barang-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(172px,1fr));gap:13px;}
+.barang-card{background:var(--card);border:none;border-radius:var(--radius);padding:16px;cursor:pointer;
+  transition:.22s;box-shadow:var(--shadow-card);display:flex;flex-direction:column;gap:8px;min-height:134px;position:relative;
+  overflow:hidden;}
+.barang-card::after{content:"";position:absolute;left:18px;right:18px;top:0;height:3px;border-radius:0 0 4px 4px;opacity:.7;}
+.barang-card.barang::after{background:linear-gradient(90deg,var(--gold-soft2),var(--gold));}
+.barang-card.jasa::after{background:linear-gradient(90deg,#9fd3c6,var(--mint));}
+.barang-card:hover{transform:translateY(-4px);box-shadow:0 14px 32px rgba(150,115,65,0.13);}
+.bc-top{display:flex;justify-content:space-between;align-items:flex-start;gap:6px;}
+.bc-kode{font-family:'DM Mono',monospace;font-size:10px;color:var(--text2);background:var(--bg-soft);
+  border-radius:var(--pill);padding:3px 9px;letter-spacing:.3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:58%;}
+.bc-stok-badge{font-size:10px;font-family:'DM Mono';padding:3px 9px;border-radius:var(--pill);font-weight:600;white-space:nowrap;}
+.stok-ok{background:rgba(90,154,114,.12);color:var(--success);}
+.stok-low{background:var(--rose-soft);color:var(--rose);}
+.stok-jasa{background:var(--mint-soft);color:var(--mint);}
+.bc-nama{font-size:13.5px;font-weight:600;color:var(--text);line-height:1.34;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.bc-foot{margin-top:auto;display:flex;align-items:center;justify-content:space-between;gap:8px;padding-top:4px;}
+.bc-harga{font-size:15px;color:var(--gold);font-family:'DM Mono',monospace;font-weight:500;white-space:nowrap;}
+.bc-add{width:30px;height:30px;border-radius:50%;background:var(--gold-soft);color:var(--gold);border:none;
+  font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.18s;}
+.barang-card:hover .bc-add{background:linear-gradient(135deg,var(--gold-soft2),var(--gold));color:#fff;transform:rotate(90deg);}
+
+/* ── cart ── */
+.cart-header{padding:20px 22px 16px;}
+.cart-title{font-size:11px;color:var(--text2);letter-spacing:2px;text-transform:uppercase;font-weight:700;
+  display:flex;align-items:center;justify-content:space-between;}
+.cart-count-pill{font-family:'DM Mono';font-size:12px;background:linear-gradient(135deg,var(--gold-soft2),var(--gold));color:#fff;
+  padding:3px 11px;border-radius:var(--pill);letter-spacing:0;}
+.cart-pasien-info{font-size:12px;color:var(--text3);margin-top:8px;display:flex;align-items:center;gap:6px;}
+.cart-items{flex:1;overflow-y:auto;padding:4px 16px 16px;}
+.cart-item{background:var(--card);border-radius:var(--radius-sm);padding:13px 15px;margin-bottom:10px;box-shadow:var(--shadow-card);transition:.18s;}
+.cart-item:hover{box-shadow:0 8px 20px rgba(150,115,65,0.1);}
+.cart-item.racikan-item{background:linear-gradient(110deg,var(--mint-soft),#fffefc 65%);}
+.ci-top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px;}
+.ci-name{font-size:13px;color:var(--text);font-weight:600;flex:1;line-height:1.32;}
+.ci-tag{font-size:9px;letter-spacing:.5px;padding:2px 8px;border-radius:var(--pill);font-weight:700;text-transform:uppercase;margin-right:6px;vertical-align:middle;}
+.tag-racik{background:var(--mint-soft);color:var(--mint);}
+.tag-jasa{background:var(--gold-soft);color:var(--gold);}
+.ci-del{background:none;border:none;color:var(--text3);cursor:pointer;font-size:16px;padding:0 3px;line-height:1;}
+.ci-del:hover{color:var(--danger);}
+.ci-sub-note{font-size:11px;color:var(--text3);margin-top:4px;font-style:italic;}
+.ci-bottom{display:flex;align-items:center;gap:10px;margin-top:11px;}
+.qty{display:flex;align-items:center;background:var(--bg-soft);border-radius:var(--pill);padding:2px;}
+.qty-btn{width:28px;height:28px;border:none;background:transparent;color:var(--text2);cursor:pointer;font-size:15px;
+  display:flex;align-items:center;justify-content:center;transition:.15s;border-radius:50%;}
+.qty-btn:hover{background:var(--bg2);color:var(--gold);}
+.qty-val{font-family:'DM Mono';font-size:13px;font-weight:600;min-width:30px;text-align:center;color:var(--text);}
+.ci-price{font-size:11px;color:var(--text3);font-family:'DM Mono';}
+.ci-sub{margin-left:auto;font-family:'DM Mono',monospace;font-size:14px;color:var(--gold);font-weight:600;}
+
+.cart-footer{padding:18px 20px;background:rgba(244,236,228,0.5);}
+.cart-total-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;}
+.ct-label{font-size:12px;color:var(--text3);}
+.ct-val{font-family:'DM Mono',monospace;font-size:13px;color:var(--text);}
+.disc-inp{width:52px;padding:6px 10px;font-size:12px;font-family:'DM Mono';text-align:right;
+  border:none;border-radius:var(--pill);background:var(--bg2);outline:none;box-shadow:var(--shadow-card);}
+.disc-inp:focus{box-shadow:0 0 0 2px var(--gold-soft);}
+.ct-total{padding-top:14px;margin-top:6px;border-top:1px dashed rgba(176,138,68,.25);}
+.ct-total .ct-label{font-size:14px;color:var(--text);font-weight:700;}
+.ct-val.big{font-size:24px;color:var(--gold);font-weight:600;font-family:'Cormorant Garamond',serif;}
+.btn-bayar{width:100%;padding:16px;margin-top:16px;background:linear-gradient(135deg,#c9a35a,var(--gold));
+  border:none;border-radius:var(--pill);font-size:15px;font-weight:700;color:#fff;cursor:pointer;
+  font-family:'DM Sans';letter-spacing:.3px;transition:.22s;display:flex;align-items:center;justify-content:center;gap:9px;
+  box-shadow:0 8px 22px rgba(176,138,68,.32);}
+.btn-bayar:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(176,138,68,.4);}
+.btn-bayar .amt{font-family:'DM Mono';}
+
+.mock-note{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:50;
+  background:rgba(70,58,44,0.9);color:#fff;font-size:12px;padding:10px 20px;border-radius:var(--pill);
+  box-shadow:0 8px 24px rgba(0,0,0,.18);}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">RACHEL</div>
+  <div class="tb-title">Kasir / POS</div>
+  <div class="tb-spacer"></div>
+  <div class="tb-user"><span class="tb-ava">R</span> Rina · Kasir</div>
+</div>
+
+<div id="pos-layout">
+  <!-- ───────── KIRI ───────── -->
+  <div id="pos-left">
+
+    <div class="pos-ctx">
+      <div class="pos-faktur">R150626 0042 A</div>
+      <div class="ctx-chip">🏥 <b>Klinik Rachel</b> · CBG1</div>
+      <div class="ctx-chip">🕐 14:28</div>
+      <div class="ctx-spacer"></div>
+      <button class="btn btn-rose btn-sm">🔄 Retur</button>
+      <button class="btn btn-ghost btn-sm">＋ Transaksi Baru</button>
+    </div>
+
+    <div class="stepper">
+      <div class="step done">
+        <div class="step-num">✓</div>
+        <div class="step-txt"><small>Langkah 1</small><span>Pasien</span></div>
+      </div>
+      <div class="step-arrow">›</div>
+      <div class="step done">
+        <div class="step-num">✓</div>
+        <div class="step-txt"><small>Langkah 2</small><span>Rekam Medik</span></div>
+      </div>
+      <div class="step-arrow">›</div>
+      <div class="step current">
+        <div class="step-num">3</div>
+        <div class="step-txt"><small>Langkah 3</small><span>Belanja</span></div>
+      </div>
+    </div>
+
+    <div class="pasien-card">
+      <div class="pasien-avatar">SW</div>
+      <div class="pasien-info">
+        <div class="pasien-name">Siti Wulandari <span class="tag-vip">MEMBER</span></div>
+        <div class="pasien-meta"><span><b>Kode</b> PSN-00128</span><span><b>Usia</b> 34 th</span><span><b>HP</b> 0812-3344-5566</span></div>
+      </div>
+      <div class="pasien-actions">
+        <div class="pasien-point">★ 1.240 poin</div>
+        <div class="mini-actions">
+          <button class="mini-btn">📋 Riwayat</button>
+          <button class="mini-btn">📷 Foto</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="rm-status">
+      <div class="ic">✓</div>
+      <div class="tx"><b>Rekam medik hari ini sudah dibuat</b><small>No. RM-150626-018 · Dr. Anita · Diagnosa: Acne vulgaris ringan</small></div>
+      <button class="mini-btn">Lihat SOAP</button>
+    </div>
+
+    <div class="search-row">
+      <div class="search-wrap">
+        <span class="si">🔍</span>
+        <input placeholder="Cari barang / jasa — ketik kode atau nama...">
+      </div>
+      <button class="btn-racikan">🧪 Racikan</button>
+      <button class="btn-resep">📄 Resep Digital</button>
+    </div>
+
+    <div class="tabs">
+      <div class="tab active">Semua <span class="cnt">322</span></div>
+      <div class="tab">Produk <span class="cnt">186</span></div>
+      <div class="tab">Perawatan <span class="cnt">136</span></div>
+    </div>
+
+    <div class="barang-grid">
+      <div class="barang-card barang">
+        <div class="bc-top"><span class="bc-kode">SRM-VITC-30</span><span class="bc-stok-badge stok-ok">stok 42</span></div>
+        <div class="bc-nama">Serum Vitamin C Brightening 30ml</div>
+        <div class="bc-foot"><span class="bc-harga">Rp 185.000</span><button class="bc-add">+</button></div>
+      </div>
+      <div class="barang-card barang">
+        <div class="bc-top"><span class="bc-kode">SUNS-SPF50</span><span class="bc-stok-badge stok-low">stok 4</span></div>
+        <div class="bc-nama">Sunscreen SPF 50 PA+++ 50ml</div>
+        <div class="bc-foot"><span class="bc-harga">Rp 145.000</span><button class="bc-add">+</button></div>
+      </div>
+      <div class="barang-card jasa">
+        <div class="bc-top"><span class="bc-kode">FAC-DETOX</span><span class="bc-stok-badge stok-jasa">jasa</span></div>
+        <div class="bc-nama">Detox Facial Treatment</div>
+        <div class="bc-foot"><span class="bc-harga">Rp 250.000</span><button class="bc-add">+</button></div>
+      </div>
+      <div class="barang-card jasa">
+        <div class="bc-top"><span class="bc-kode">SCARLET-FW</span><span class="bc-stok-badge stok-jasa">jasa</span></div>
+        <div class="bc-nama">Scarlet Whitening Wajah</div>
+        <div class="bc-foot"><span class="bc-harga">Rp 500.000</span><button class="bc-add">+</button></div>
+      </div>
+      <div class="barang-card barang">
+        <div class="bc-top"><span class="bc-kode">TONER-HYDR</span><span class="bc-stok-badge stok-ok">stok 28</span></div>
+        <div class="bc-nama">Hydrating Toner Rose Water 100ml</div>
+        <div class="bc-foot"><span class="bc-harga">Rp 98.000</span><button class="bc-add">+</button></div>
+      </div>
+      <div class="barang-card barang">
+        <div class="bc-top"><span class="bc-kode">MASK-CLAY</span><span class="bc-stok-badge stok-ok">stok 15</span></div>
+        <div class="bc-nama">Clay Mask Pore Cleansing 60g</div>
+        <div class="bc-foot"><span class="bc-harga">Rp 120.000</span><button class="bc-add">+</button></div>
+      </div>
+      <div class="barang-card jasa">
+        <div class="bc-top"><span class="bc-kode">PEEL-CHEM</span><span class="bc-stok-badge stok-jasa">jasa</span></div>
+        <div class="bc-nama">Chemical Peeling Wajah</div>
+        <div class="bc-foot"><span class="bc-harga">Rp 350.000</span><button class="bc-add">+</button></div>
+      </div>
+      <div class="barang-card barang">
+        <div class="bc-top"><span class="bc-kode">CREAM-NGT</span><span class="bc-stok-badge stok-ok">stok 33</span></div>
+        <div class="bc-nama">Night Cream Anti-Aging 30g</div>
+        <div class="bc-foot"><span class="bc-harga">Rp 210.000</span><button class="bc-add">+</button></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ───────── KANAN (CART) ───────── -->
+  <div id="pos-right">
+    <div class="cart-header">
+      <div class="cart-title">Keranjang Transaksi <span class="cart-count-pill">4 item</span></div>
+      <div class="cart-pasien-info">👤 Siti Wulandari · RM-150626-018</div>
+    </div>
+
+    <div class="cart-items">
+      <div class="cart-item">
+        <div class="ci-top">
+          <div class="ci-name">Serum Vitamin C Brightening 30ml</div>
+          <button class="ci-del">×</button>
+        </div>
+        <div class="ci-bottom">
+          <div class="qty"><button class="qty-btn">−</button><span class="qty-val">2</span><button class="qty-btn">+</button></div>
+          <span class="ci-price">@ 185.000</span>
+          <span class="ci-sub">370.000</span>
+        </div>
+      </div>
+
+      <div class="cart-item">
+        <div class="ci-top">
+          <div class="ci-name"><span class="ci-tag tag-jasa">Jasa</span>Detox Facial Treatment</div>
+          <button class="ci-del">×</button>
+        </div>
+        <div class="ci-bottom">
+          <div class="qty"><button class="qty-btn">−</button><span class="qty-val">1</span><button class="qty-btn">+</button></div>
+          <span class="ci-price">@ 250.000</span>
+          <span class="ci-sub">250.000</span>
+        </div>
+      </div>
+
+      <div class="cart-item racikan-item">
+        <div class="ci-top">
+          <div class="ci-name"><span class="ci-tag tag-racik">Racikan</span>Cream Malam Racikan Dr. Anita</div>
+          <button class="ci-del">×</button>
+        </div>
+        <div class="ci-sub-note">3 bahan · komposisi tersembunyi di faktur</div>
+        <div class="ci-bottom">
+          <div class="qty"><button class="qty-btn">−</button><span class="qty-val">1</span><button class="qty-btn">+</button></div>
+          <span class="ci-price">racikan</span>
+          <span class="ci-sub">175.000</span>
+        </div>
+      </div>
+
+      <div class="cart-item">
+        <div class="ci-top">
+          <div class="ci-name">Sunscreen SPF 50 PA+++ 50ml</div>
+          <button class="ci-del">×</button>
+        </div>
+        <div class="ci-bottom">
+          <div class="qty"><button class="qty-btn">−</button><span class="qty-val">1</span><button class="qty-btn">+</button></div>
+          <span class="ci-price">@ 145.000</span>
+          <span class="ci-sub">145.000</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="cart-footer">
+      <div class="cart-total-row"><span class="ct-label">Subtotal</span><span class="ct-val">Rp 940.000</span></div>
+      <div class="cart-total-row">
+        <span class="ct-label">Disc Nota</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <input class="disc-inp" value="5"><span style="font-size:11px;color:var(--text3)">%</span>
+          <span class="ct-val" style="color:var(--rose);min-width:62px;text-align:right;">− 47.000</span>
+        </div>
+      </div>
+      <div class="cart-total-row"><span class="ct-label">Poin didapat</span><span class="ct-val" style="color:var(--success)">+ 89 poin</span></div>
+      <div class="cart-total-row ct-total">
+        <span class="ct-label">TOTAL</span>
+        <span class="ct-val big">Rp 893.000</span>
+      </div>
+      <button class="btn-bayar">💳 Proses Pembayaran · <span class="amt">Rp 893.000</span></button>
+    </div>
+  </div>
+</div>
+
+<div class="mock-note">Mockup statis — POS pastel lembut · palet brand Rachel Clinic</div>
+
+</body>
+</html>
