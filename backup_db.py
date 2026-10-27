@@ -1,25 +1,25 @@
 """
-Backup database Rachel Clinic dengan aman (SQLite Online Backup API).
+Backup database AppClinic dengan aman (SQLite Online Backup API).
 Aman dipakai walau server sedang berjalan & memakai mode WAL.
 
-Hasil: backup\rachel_clinic_YYYYMMDD_HHMMSS.db
+Hasil: backup\appclinic_YYYYMMDD_HHMMSS.db
 """
 import os
 import sqlite3
 import datetime
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-SRC  = os.path.join(HERE, 'rachel_clinic.db')
+SRC  = os.path.join(HERE, 'appclinic.db')
 
 
 def main():
     if not os.path.exists(SRC):
-        print('[GAGAL] rachel_clinic.db tidak ditemukan.')
+        print('[GAGAL] appclinic.db tidak ditemukan.')
         return
     backup_dir = os.path.join(HERE, 'backup')
     os.makedirs(backup_dir, exist_ok=True)
     ts = datetime.datetime.now().strftime('%Y%m%d_%H%M%S')
-    dst_path = os.path.join(backup_dir, f'rachel_clinic_{ts}.db')
+    dst_path = os.path.join(backup_dir, f'appclinic_{ts}.db')
 
     src = sqlite3.connect(SRC)
     dst = sqlite3.connect(dst_path)

@@ -1,5 +1,5 @@
 import sqlite3
-con = sqlite3.connect('rachel_clinic.db')
+con = sqlite3.connect('appclinic.db')
 cur = con.cursor()
 cur.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name")
 tables = [r[0] for r in cur.fetchall()]

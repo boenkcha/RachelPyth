@@ -1,7 +1,7 @@
 import sqlite3, os, time, glob
 
 base = os.path.dirname(os.path.abspath(__file__))
-db = os.path.join(base, 'rachel_clinic.db')
+db = os.path.join(base, 'appclinic.db')
 print("== DB UTAMA ==")
 print("path :", db)
 print("ada  :", os.path.exists(db))

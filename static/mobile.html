@@ -7,7 +7,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="theme-color" content="#e74c8b">
-<title>Rachel Clinic — Foto Pasien</title>
+<title>AppClinic — Foto Pasien</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
 :root{
@@ -255,7 +255,7 @@ input.form-input:focus{border-color:var(--pink);box-shadow:0 0 0 3px var(--pink-
 <body>
 <!-- LOGIN OVERLAY -->
 <div id="login-overlay">
-  <div class="login-brand">RACHEL</div>
+  <div class="login-brand">APPCLINIC</div>
   <div class="login-sub">Foto Pasien · Mobile</div>
   <div class="login-field">
     <label>Username</label>
@@ -322,7 +322,7 @@ const state = {
 };
 
 // ── AUTH PERSISTENCE ──────────────────────────────────────
-const STORAGE_KEY = 'rc_mobile_session';
+const STORAGE_KEY = 'ac_mobile_session';
 function saveSession(user, token) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify({user, token}));
 }
@@ -405,7 +405,7 @@ async function renderSearch(query='') {
   <div class="hdr">
     <div style="flex:1;">
       <div class="hdr-title">📸 Foto Pasien</div>
-      <div class="hdr-sub">${state.user?.nama || 'Rachel Clinic'}</div>
+      <div class="hdr-sub">${state.user?.nama || 'AppClinic'}</div>
     </div>
     <button class="hdr-action" onclick="doMobileLogout()" style="font-size:11px;opacity:.85">Keluar</button>
   </div>
@@ -1460,7 +1460,7 @@ function renderKomisi() {
   <div class="hdr">
     <div style="flex:1;">
       <div class="hdr-title">💰 Komisi Saya</div>
-      <div class="hdr-sub">${state.user?.nama || 'Rachel Clinic'}</div>
+      <div class="hdr-sub">${state.user?.nama || 'AppClinic'}</div>
     </div>
     <button class="hdr-action" onclick="doMobileLogout()" style="font-size:11px;opacity:.85">Keluar</button>
   </div>
@@ -1562,7 +1562,7 @@ function renderKomisiResult(rows) {
       <div class="komisi-item" style="${warnStyle}">
         <div style="flex:1;min-width:0;">
           <div class="ki-jasa">${r.nm_pelayanan || '—'}${pending?' <span style="font-size:9px;font-weight:700;padding:1px 7px;border-radius:9px;background:var(--warn);color:#fff;margin-left:4px;">MENUNGGU</span>':''}${diretur?' <span style="font-size:9px;font-weight:700;padding:1px 7px;border-radius:9px;background:var(--danger);color:#fff;margin-left:4px;">DIRETUR</span>':''}</div>
-          <div class="ki-meta">${r.nm_pasien || r.kd_pasien || '—'}${r.no_faktur ? ' · '+r.no_faktur : ''}</div>
+          <div class="ki-meta">${r.nm_pasien || '—'}${r.kd_pasien ? ' ('+r.kd_pasien+')' : ''}${r.no_faktur ? ' · '+r.no_faktur : ''}</div>
           ${handshakeLbl?`<div style="font-size:10.5px;color:var(--pink);margin-top:2px;">${handshakeLbl}</div>`:''}
           ${kBelumDipilih
             ? '<div style="font-size:10.5px;color:var(--warn);margin-top:2px;">⚠️ Perawat K belum dipilih kasir — minta kasir selesaikan di menu Serah-Terima Kunci</div>'

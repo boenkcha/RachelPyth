@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Rachel Clinic — Sistem Manajemen</title>
+<title>AppClinic — Sistem Manajemen</title>
 <link href="/static/fonts/fonts.css" rel="stylesheet">
 <style>
 :root {
@@ -1434,7 +1434,7 @@ textarea:focus{border-color:var(--gold);background:var(--bg4);}
 <!-- ─── LOGIN ─────────────────────────────────────────── -->
 <div id="login-screen">
   <div class="login-card">
-    <div class="login-logo">RACHEL</div>
+    <div class="login-logo">APPCLINIC</div>
     <div class="login-sub">Clinic Management System</div>
     <input type="text" id="l-user" placeholder="Username" value="" autocomplete="username">
     <input type="password" id="l-pass" placeholder="Password" value="" autocomplete="current-password">
@@ -1449,7 +1449,7 @@ textarea:focus{border-color:var(--gold);background:var(--bg4);}
   <!-- Sidebar -->
   <div id="sidebar">
     <div class="sidebar-brand">
-      <div class="brand-name">Rachel</div>
+      <div class="brand-name">AppClinic</div>
       <div class="brand-tag">Clinic &amp; Laser</div>
     </div>
     <div class="sidebar-user">
@@ -1593,6 +1593,12 @@ textarea:focus{border-color:var(--gold);background:var(--bg4);}
         </button>
       </div>
       <div id="bayar-point-info" style="display:none;font-size:11.5px;color:var(--text3);margin-top:6px;padding:8px 10px;background:var(--bg3);border-radius:8px;"></div>
+      <div id="bayar-tunai-info" style="display:none;font-size:12px;margin-top:8px;padding:10px 12px;background:var(--bg3);border-radius:8px;">
+        <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:3px;">Uang diterima dari pasien (opsional — bantu hitung kembalian)</label>
+        <input type="text" inputmode="numeric" id="bayar-tunai-diterima" placeholder="0"
+          style="width:100%;font-weight:700;margin-bottom:6px;" oninput="updateBayarTunaiHitung()">
+        <div id="bayar-tunai-kembalian" style="display:flex;justify-content:space-between;font-size:13.5px;font-weight:700;"></div>
+      </div>
       <select id="bayar-bank" style="width:100%;display:none;">
         <option value="">— Pilih Bank —</option>
         <option>BCA</option><option>Mandiri</option><option>BNI</option>
@@ -2022,17 +2028,30 @@ let beliState = { faktur:'', suplier:null };
 let _pointRateGlobal = 50000;   // Rp per 1 point — dimuat dari /api/pengaturan saat login
 let _pointRedeemRateGlobal = 50000;   // Rp per 1 point SAAT DITUKAR bayar — kurs terpisah
 let klinikInfo = {              // identitas untuk cetak faktur — dimuat dari /api/pengaturan
-  nama:'Rachel Clinic', sub:'Klinik Spesialis Kulit & Laser',
+  nama:'AppClinic', sub:'Klinik Spesialis Kulit & Laser',
   alamat:'', telp:'', kota:'', logo:'/static/logo.png',
 };
-// Kode terminal/kasir komputer ini (per-komputer, untuk anti-tabrakan nomor faktur multi-kasir)
+// Kode terminal/kasir KOMPUTER INI (bukan user login) — dipakai anti-tabrakan nomor faktur
+// multi-kasir. Dulu fallback-nya `currentUser.id` (ID user yg login) — BUG nyata ditemukan
+// 2026-10-27: staf di klinik ini pindah-pindah komputer pakai akun masing-masing, jadi kalau
+// kode terminal belum di-set manual di Pengaturan, 2 komputer BERBEDA yg kebetulan dipakai
+// user yg sama (atau sesi lama belum logout) bisa dapat kode terminal SAMA → nomor faktur
+// bentrok & data transaksi tercampur antar pasien ("ketimpa-timpa"). Sekarang: kalau belum
+// pernah di-set manual, generate SEKALI kode acak & SIMPAN permanen di localStorage komputer
+// ini (independen dari siapa yg login) — jadi tiap komputer otomatis unik tanpa perlu admin
+// setting manual dulu (meski tetap bisa di-override manual via Pengaturan → Penomoran Faktur).
 function getTerminalCode() {
-  return (localStorage.getItem('rc_terminal_code') || String(currentUser?.id || '1')).trim();
+  let code = (localStorage.getItem('ac_terminal_code') || '').trim();
+  if (!code) {
+    code = 'T' + Math.random().toString(36).slice(2, 6).toUpperCase();
+    try { localStorage.setItem('ac_terminal_code', code); } catch (e) { /* storage tak tersedia */ }
+  }
+  return code;
 }
 
 // ── Draft POS persisten (tahan refresh / tutup browser) ──────────────
 function posDraftKey() {
-  return currentUser?.id ? `rc_pos_draft_${currentUser.id}` : null;
+  return currentUser?.id ? `ac_pos_draft_${currentUser.id}` : null;
 }
 function savePosState() {
   try {
@@ -2196,7 +2215,7 @@ async function api(path, opts={}) {
 // ─── AUTH ────────────────────────────────────────────
 let _activeBranchName = '';
 
-// Pemilih cabang untuk kasir saat login (CBG1 Klinik Rachel / CBG2 KIBAR / dst).
+// Pemilih cabang untuk kasir saat login (CBG1 Klinik AppClinic / CBG2 KIBAR / dst).
 // Mengembalikan {kd_lokasi, nm_lokasi}. Bila cuma 1 cabang, langsung pakai itu.
 async function chooseBranchForKasir(defaultLok) {
   let loks = [];
@@ -2244,7 +2263,7 @@ async function doLogin() {
       return;
     }
     if (res.user.role === 'perawat' || res.user.role === 'beautician') {
-      localStorage.setItem('rc_mobile_session', JSON.stringify({user: res.user, token: res.token}));
+      localStorage.setItem('ac_mobile_session', JSON.stringify({user: res.user, token: res.token}));
       window.location.href = '/mobile';
       return;
     }
@@ -2271,7 +2290,7 @@ async function doLogin() {
       if (s.point_rate) _pointRateGlobal = parseFloat(s.point_rate) || 50000;
       if (s.point_redeem_rate) _pointRedeemRateGlobal = parseFloat(s.point_redeem_rate) || 50000;
       klinikInfo = {
-        nama:   s.klinik_nama   || 'Rachel Clinic',
+        nama:   s.klinik_nama   || 'AppClinic',
         sub:    s.klinik_sub    || '',
         alamat: s.klinik_alamat || '',
         telp:   s.klinik_telp   || '',
@@ -2736,14 +2755,17 @@ async function initPOS() {
   updateStepper();
   await loadFormulaSet();
 
-  // PENTING: kalau SUDAH ada nomor faktur di state, PAKAI ULANG — jangan ambil baru.
-  // (Tiap panggil /api/nomor-faktur menaikkan counter permanen → boros nomor.)
-  // - Ada isi (pasien/item)        → pulihkan apa adanya (transaksi berjalan).
-  // - Kosong tapi nomor dibuat hari ini → pakai ulang nomor kosong itu.
-  // - Tidak ada nomor / nomor basi (beda hari) → buat baru.
-  const adaIsi   = posState.pasien || posState.items.length > 0;
-  const sameDay  = posState.fakturDate === todayLocal();
-  if (posState.faktur && (adaIsi || sameDay)) {
+  // - Ada isi (pasien/item) → ini transaksi NYATA yang sedang berjalan, pulihkan apa
+  //   adanya TANPA tanya server lagi (no_faktur-nya sudah "terpakai" di DB, tidak boleh
+  //   berubah-ubah walau Pengaturan Penomoran diubah di tengah jalan).
+  // - Kosong (belum ada pasien/item) → BELUM ada apa pun di server yg terikat ke nomor
+  //   ini, jadi SELALU minta ulang ke server lewat newTransaction() — bukan cuma kalau
+  //   beda hari. Server sendiri yg reuse nomor kalau memang belum terpakai (lihat
+  //   _reserve_or_reuse_faktur di app.py, TIDAK menaikkan counter kalau belum dipakai),
+  //   jadi aman dipanggil berulang — SEKALIGUS memperbaiki bug nomor faktur "nyangkut"
+  //   format lama walau admin sudah ubah prefix/kode terminal di Pengaturan (2026-10-27).
+  const adaIsi = posState.pasien || posState.items.length > 0;
+  if (posState.faktur && adaIsi) {
     await restorePOS();
   } else {
     await newTransaction();
@@ -2789,20 +2811,17 @@ async function loadFormulaSet() {
 }
 
 async function newTransaction() {
-  // Kalau transaksi sekarang masih BLANK (sudah punya nomor faktur tapi belum ada
-  // pasien & belum ada item), PAKAI ULANG nomor itu — jangan ambil nomor baru.
-  // Ambil nomor baru hanya bila transaksi sebelumnya sudah terpakai / belum ada nomor.
-  let faktur = posState.faktur;
-  let fakturDate = posState.fakturDate;
-  // Blank = sudah punya nomor, belum ada pasien/item, DAN nomor itu dibuat hari ini.
-  const masihBlank = !!faktur && !posState.pasien && posState.items.length === 0
-    && posState.fakturDate === todayLocal();
-  if (!masihBlank) {
-    const res = await api('/api/nomor-faktur?terminal=' + encodeURIComponent(getTerminalCode())
-      + '&kd_lokasi=' + encodeURIComponent(currentUser?.kd_lokasi || 'CBG1'));
-    faktur = res.faktur;
-    fakturDate = todayLocal();
-  }
+  // SELALU minta nomor ke server — server sendiri yg "pakai ulang nomor kalau belum
+  // terpakai" (lihat _reserve_or_reuse_faktur di app.py, counter TIDAK naik kalau nomor
+  // terakhir di terminal ini belum dipakai), jadi aman dipanggil berulang, tidak ada
+  // nomor yang hangus/lompat. JANGAN reuse posState.faktur di sisi klien tanpa tanya
+  // server dulu (dulu ada shortcut di sini) — itu bikin nomor lama (format prefix/kode
+  // terminal LAMA) tetap dipakai terus walau admin sudah ubah Pengaturan Penomoran
+  // Faktur, karena klien tidak pernah cek ulang ke server (ditemukan 2026-10-27).
+  const res = await api('/api/nomor-faktur?terminal=' + encodeURIComponent(getTerminalCode())
+    + '&kd_lokasi=' + encodeURIComponent(currentUser?.kd_lokasi || 'CBG1'));
+  const faktur = res.faktur;
+  const fakturDate = todayLocal();
   posState = { faktur: faktur, fakturDate: fakturDate, pasien: null, rekamMedik: null, items: [], discTrx: 0 };
   $('pos-faktur-label').textContent = faktur;
   const cardArea = $('pos-pasien-card-area');
@@ -3114,7 +3133,7 @@ function updateStepper() {
 
 // Isi chip cabang + jalankan jam pada header POS.
 function initPosContext() {
-  const map = {CBG1:'Klinik Rachel', CBG2:'KIBAR', INDUK:'Induk'};
+  const map = {CBG1:'Klinik AppClinic', CBG2:'KIBAR', INDUK:'Induk'};
   const kd = currentUser?.kd_lokasi || 'CBG1';
   const chip = $('pos-cabang-chip');
   if(chip) chip.innerHTML = `🏥 <b>${map[kd]||kd}</b> · ${kd}`;
@@ -3237,6 +3256,30 @@ async function pilihMetode(metode, el) {
     if(fresh && !fresh.error) posState.pasien.point = fresh.point;
   }
   updateBayarPointInfo();
+  updateBayarTunaiInfo();
+}
+
+// ── Kalkulator kembalian (bayar Tunai) — murni bantu kasir, TIDAK memblokir
+// "Proses Bayar" (beda dari Point Member yg validasinya wajib) — kasir boleh kosongkan
+// kalau tidak perlu dihitung.
+function updateBayarTunaiInfo() {
+  const el = $('bayar-tunai-info');
+  if(!el) return;
+  const tunaiAktif = _metodeSelected === 'Tunai' && !$('bayar-split-toggle')?.checked;
+  el.style.display = tunaiAktif ? 'block' : 'none';
+  if(tunaiAktif) updateBayarTunaiHitung();
+}
+function updateBayarTunaiHitung() {
+  const inp = $('bayar-tunai-diterima');
+  const out = $('bayar-tunai-kembalian');
+  if(!inp || !out) return;
+  const diterima = parseFloat((inp.value || '').replace(/[^\d]/g, '')) || 0;
+  const total = _bayarTotalAkhir || 0;
+  if(diterima <= 0) { out.innerHTML = ''; return; }
+  const kembalian = diterima - total;
+  out.innerHTML = kembalian < 0
+    ? `<span>Kurang bayar</span><span style="color:#dc2626;">Rp ${fmtNum(Math.abs(kembalian))}</span>`
+    : `<span>Kembalian</span><span style="color:#16a34a;">Rp ${fmtNum(kembalian)}</span>`;
 }
 
 function _bayarPointMinimum() {
@@ -3312,6 +3355,7 @@ function toggleSplitBayar() {
     splitRows = [{metode:'Tunai', bank:'', nominal: 0}, {metode:'Transfer', bank:'', nominal: 0}];
     renderSplitRows();
   }
+  updateBayarTunaiInfo();
 }
 function tambahSplitRow() {
   splitRows.push({metode:'Transfer', bank:'', nominal: 0});
@@ -3430,6 +3474,9 @@ async function openBayar() {
   document.querySelectorAll('.metode-btn')[0]?.classList.add('active');
   $('bayar-bank').style.display = 'none';
   $('bayar-point-info').style.display = 'none';
+  const tunaiInp = $('bayar-tunai-diterima');
+  if(tunaiInp) tunaiInp.value = '';
+  updateBayarTunaiInfo();
   // Dokter mengikuti rekam medik & terkunci; bisa dipilih hanya jika RM belum ada dokter
   await loadDokterOptions('bayar-dokter');   // sumber SAMA dgn dropdown Rekam Medik
   const sel  = $('bayar-dokter');
@@ -3624,7 +3671,7 @@ async function _konfirmBayarImpl() {
     nextVisit: $('bayar-next').value || '',
     discTrx:   posState.discTrx || 0,
     items:     posState.items.map(it => ({
-      nama: it.nama, qty: it.qty, harga: it.harga, jenis: it.jenis,
+      kd: it.kd, nama: it.nama, qty: it.qty, harga: it.harga, jenis: it.jenis,
       disc: parseFloat(it.disc) || 0,
       beautician: (it.jenis === 'jasa' && it.karyawan_list?.length)
         ? it.karyawan_list.map(k => k.nickname).join(', ') : '',
@@ -3655,7 +3702,7 @@ function cetakFaktur(D) {
     subtotal += lineSub;
     return `<tr>
       <td class="c">${i + 1}</td>
-      <td>${it.nama}${isRac ? ' <span class="rac">🧪 racikan</span>' : ''}</td>
+      <td>${isRac ? it.nama : (it.kd || it.nama)}</td>
       <td>${it.beautician || ''}</td>
       <td class="c">${it.qty}</td>
       <td class="r">${nf(it.harga)}</td>
@@ -3683,37 +3730,36 @@ function cetakFaktur(D) {
   @page { size: A4 portrait; margin: 12mm 0; }
   html,body{width:100%;}
   *{margin:0;padding:0;box-sizing:border-box;}
-  body{font-family:'Segoe UI',Arial,sans-serif;color:#1a1a1a;font-size:10.5px;line-height:1.35;-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:0 6mm;}
+  body{font-family:'Segoe UI',Arial,sans-serif;color:#1a1a1a;font-size:11.5px;line-height:1.35;-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:0 6mm;}
   .head{display:flex;justify-content:space-between;gap:16px;padding-bottom:6px;border-bottom:2px solid #16a34a;}
   .head-left{display:flex;gap:10px;align-items:flex-start;}
   .logo{height:46px;width:auto;object-fit:contain;}
-  .klinik-nama{font-size:17px;font-weight:800;color:#16a34a;letter-spacing:.3px;line-height:1;}
-  .klinik-sub{font-size:10px;color:#b91c1c;font-weight:600;margin-top:2px;}
-  .klinik-meta{font-size:9.5px;color:#444;margin-top:3px;}
-  .head-right{text-align:left;min-width:42%;font-size:10px;}
+  .klinik-nama{font-size:18px;font-weight:800;color:#16a34a;letter-spacing:.3px;line-height:1;}
+  .klinik-sub{font-size:11px;color:#b91c1c;font-weight:600;margin-top:2px;}
+  .klinik-meta{font-size:10.5px;color:#444;margin-top:3px;}
+  .head-right{text-align:left;min-width:42%;font-size:11px;}
   .head-right .kota{color:#444;margin-bottom:3px;}
-  .yth-label{font-size:9px;color:#777;text-transform:uppercase;letter-spacing:.5px;}
-  .yth-nama{font-weight:700;font-size:12px;text-transform:uppercase;}
+  .yth-label{font-size:10px;color:#777;text-transform:uppercase;letter-spacing:.5px;}
+  .yth-nama{font-weight:700;font-size:13px;text-transform:uppercase;}
   .yth-meta{color:#444;}
-  .info{display:flex;gap:24px;margin:7px 0 5px;font-size:10px;}
+  .info{display:flex;gap:24px;margin:7px 0 5px;font-size:11px;}
   .info b{display:inline-block;min-width:118px;color:#555;font-weight:600;}
   table.items{width:100%;border-collapse:collapse;margin-top:2px;}
   table.items th{background:#f0fdf4;border-bottom:1.5px solid #16a34a;padding:5px 7px;text-align:left;
-    font-size:9px;text-transform:uppercase;letter-spacing:.3px;color:#15803d;}
+    font-size:10px;text-transform:uppercase;letter-spacing:.3px;color:#15803d;}
   table.items td{padding:4px 7px;border-bottom:1px dashed #d4d4d4;vertical-align:top;}
   table.items td.c,table.items th.c{text-align:center;}
   table.items td.r,table.items th.r{text-align:right;font-variant-numeric:tabular-nums;}
-  .rac{font-size:8.5px;color:#0d9488;}
   .bottom{display:flex;justify-content:space-between;gap:20px;margin-top:10px;}
-  .note{font-style:italic;color:#b91c1c;font-size:9.5px;max-width:58%;}
+  .note{font-style:italic;color:#b91c1c;font-size:10.5px;max-width:58%;}
   .ttd-wrap{display:flex;gap:34px;margin-top:18px;}
-  .ttd{text-align:center;font-size:9.5px;color:#555;}
+  .ttd{text-align:center;font-size:10.5px;color:#555;}
   .ttd .line{margin-top:34px;border-top:1px solid #999;padding-top:2px;min-width:90px;}
-  .totals{min-width:38%;font-size:10.5px;}
+  .totals{min-width:38%;font-size:11.5px;}
   .totals .row{display:flex;justify-content:space-between;padding:2px 0;}
-  .totals .grand{border-top:1.5px solid #16a34a;margin-top:3px;padding-top:4px;font-weight:800;font-size:13px;color:#16a34a;}
-  .totals .point{margin-top:4px;font-style:italic;color:#b45309;font-size:10px;display:flex;justify-content:space-between;}
-  .foot{text-align:center;font-size:8px;color:#999;margin-top:8px;border-top:1px solid #eee;padding-top:4px;}
+  .totals .grand{border-top:1.5px solid #16a34a;margin-top:3px;padding-top:4px;font-weight:800;font-size:14px;color:#16a34a;}
+  .totals .point{margin-top:4px;font-style:italic;color:#b45309;font-size:11px;display:flex;justify-content:space-between;}
+  .foot{text-align:center;font-size:9px;color:#999;margin-top:8px;border-top:1px solid #eee;padding-top:4px;}
 </style></head><body>
   <div class="head">
     <div class="head-left">
@@ -3795,7 +3841,7 @@ function cetakFaktur(D) {
 //                     (mis. Windows 7, Chrome tak bisa update lagi). Lebih tahan banting,
 //                     cuma andalkan font monospace dasar, tapi tampilan lebih sederhana.
 function getPrintMode() {
-  return localStorage.getItem('rc_print_mode') || 'a5';
+  return localStorage.getItem('ac_print_mode') || 'a5';
 }
 
 // ── CETAK FAKTUR DOT-MATRIX — VERSI TEKS POLOS (LQ310, Windows/Chrome lawas) ──
@@ -3834,7 +3880,7 @@ function cetakFakturDotMatrixTeks(D) {
     const isRac   = it.jenis === 'racikan';
     const lineSub = it.harga * (1 - (it.disc || 0) / 100) * it.qty;
     subtotal += lineSub;
-    const nama = (it.nama || '') + (isRac ? ' (racikan)' : '');
+    const nama = isRac ? (it.nama || '') : (it.kd || it.nama || '');
     itemLines.push(
       R(i + 1, 3) + ' ' + L(nama, 24) + ' ' + L(it.beautician || '', 13) + ' ' +
       R(it.qty, 4) + ' ' + R(nf(it.harga), 9) + ' ' + R(it.disc ? it.disc + '%' : '-', 5) + ' ' + R(nf(lineSub), 10)
@@ -3888,7 +3934,7 @@ function cetakFakturDotMatrixTeks(D) {
 <style>
   @page { size: 210mm 297mm; margin: 10mm; }
   *{margin:0;padding:0;}
-  body{font-family:'Courier New',Courier,monospace;font-size:13px;line-height:1.3;color:#000;}
+  body{font-family:'Courier New',Courier,monospace;font-size:14px;line-height:1.3;color:#000;}
   pre{white-space:pre;font-family:inherit;font-size:inherit;margin:0;}
 </style></head><body><pre>${esc(out.join('\n'))}</pre></body></html>`;
 
@@ -3928,7 +3974,7 @@ function cetakFakturDotMatrixHTML(D) {
     subtotal += lineSub;
     return `<tr>
       <td class="c">${i + 1}</td>
-      <td>${esc(it.nama)}${isRac ? ' (racikan)' : ''}</td>
+      <td>${esc(isRac ? it.nama : (it.kd || it.nama))}</td>
       <td>${esc(it.beautician || '')}</td>
       <td class="c">${it.qty}</td>
       <td class="r">${nf(it.harga)}</td>
@@ -3948,30 +3994,30 @@ function cetakFakturDotMatrixHTML(D) {
   @page { size: 210mm 297mm; margin: 6mm 10mm; }
   html,body{width:190mm;}
   *{margin:0;padding:0;box-sizing:border-box;}
-  body{font-family:'Courier New',monospace;color:#000;font-size:13px;line-height:1.35;}
+  body{font-family:'Courier New',monospace;color:#000;font-size:14px;line-height:1.35;}
   .head{display:flex;justify-content:space-between;gap:14px;border-bottom:1px solid #000;padding-bottom:3px;}
-  .klinik-nama{font-size:18px;font-weight:bold;}
-  .klinik-meta{font-size:12px;}
-  .head-right{text-align:left;font-size:12px;min-width:38%;}
-  .yth{margin:4px 0 3px;font-size:12px;}
+  .klinik-nama{font-size:19px;font-weight:bold;}
+  .klinik-meta{font-size:13px;}
+  .head-right{text-align:left;font-size:13px;min-width:38%;}
+  .yth{margin:4px 0 3px;font-size:13px;}
   .yth b{text-transform:uppercase;}
-  .info{display:flex;gap:30px;font-size:12px;margin-bottom:3px;}
+  .info{display:flex;gap:30px;font-size:13px;margin-bottom:3px;}
   .info span{display:inline-block;min-width:78px;}
   table.items{width:100%;border-collapse:collapse;margin-top:2px;}
-  table.items th{border-top:1px solid #000;border-bottom:1px solid #000;padding:3px 5px;text-align:left;font-size:12px;}
+  table.items th{border-top:1px solid #000;border-bottom:1px solid #000;padding:3px 5px;text-align:left;font-size:13px;}
   table.items td{padding:3px 5px;border-bottom:1px dotted #555;vertical-align:top;}
   table.items td.c,table.items th.c{text-align:center;}
   table.items td.r,table.items th.r{text-align:right;}
   .bottom{display:flex;justify-content:space-between;gap:20px;margin-top:6px;}
-  .note{font-size:11px;max-width:55%;}
+  .note{font-size:12px;max-width:55%;}
   .ttd-wrap{display:flex;gap:30px;margin-top:14px;}
-  .ttd{text-align:center;font-size:12px;}
+  .ttd{text-align:center;font-size:13px;}
   .ttd .line{margin-top:26px;border-top:1px solid #000;padding-top:1px;min-width:90px;}
-  .totals{min-width:36%;font-size:13px;}
+  .totals{min-width:36%;font-size:14px;}
   .totals .row{display:flex;justify-content:space-between;padding:1px 0;}
-  .totals .grand{border-top:1px solid #000;margin-top:2px;padding-top:2px;font-weight:bold;font-size:15px;}
-  .totals .point{margin-top:2px;display:flex;justify-content:space-between;font-size:12px;}
-  .foot{text-align:center;font-size:10px;margin-top:5px;border-top:1px solid #000;padding-top:2px;}
+  .totals .grand{border-top:1px solid #000;margin-top:2px;padding-top:2px;font-weight:bold;font-size:16px;}
+  .totals .point{margin-top:2px;display:flex;justify-content:space-between;font-size:13px;}
+  .foot{text-align:center;font-size:11px;margin-top:5px;border-top:1px solid #000;padding-top:2px;}
 </style></head><body>
   <div class="head">
     <div>
@@ -4783,9 +4829,9 @@ function notifCetak(msg, id) {
 // dicoba tebak beberapa kali, tetap meleset) — jadi user yang paling tahu ukuran
 // kertasnya sendiri, tinggal masukkan & langsung dipakai tanpa perlu ubah kode lagi.
 function getResepPaperSize() {
-  const w = parseFloat(localStorage.getItem('rc_resep_w'));
-  const h = parseFloat(localStorage.getItem('rc_resep_h'));
-  const m = parseFloat(localStorage.getItem('rc_resep_margin'));
+  const w = parseFloat(localStorage.getItem('ac_resep_w'));
+  const h = parseFloat(localStorage.getItem('ac_resep_h'));
+  const m = parseFloat(localStorage.getItem('ac_resep_margin'));
   return {
     w: (w > 0) ? w : 110,
     h: (h > 0) ? h : 215.9,
@@ -4831,7 +4877,7 @@ function cetakResepDigital() {
   </style></head><body>
   <div class="resep-wrap">
   <div class="clinic">
-    <h2>Rachel Clinic</h2>
+    <h2>AppClinic</h2>
     <p>Klinik Kecantikan &amp; Kesehatan</p>
   </div>
   <div class="meta">
@@ -5381,12 +5427,13 @@ pages.pasien = async () => {
   </div>
   <div class="table-wrap">
     <table>
-      <thead><tr><th>Kode</th><th>Nama</th><th>Telp</th><th>Status</th><th>Point</th><th>Aksi</th></tr></thead>
+      <thead><tr><th>Kode</th><th>Nama</th><th>Alamat</th><th>Telp</th><th>Status</th><th>Point</th><th>Aksi</th></tr></thead>
       <tbody>
-        ${!rows.length ? `<tr><td colspan="6" style="text-align:center;padding:40px;color:var(--text3)">Tidak ada data</td></tr>` :
+        ${!rows.length ? `<tr><td colspan="7" style="text-align:center;padding:40px;color:var(--text3)">Tidak ada data</td></tr>` :
           rows.map(p => `<tr>
             <td><span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text3)">${p.kd_pasien}</span></td>
             <td class="strong">${p.nm_pasien}</td>
+            <td>${p.alamat||'—'}</td>
             <td>${p.telp||'—'}</td>
             <td>${p.is_member ? '<span class="badge badge-gold">✨ Member</span>' : '<span class="badge badge-gray">Umum</span>'}</td>
             <td><span style="font-family:\'DM Mono\',monospace">—</span></td>
@@ -5403,6 +5450,7 @@ async function searchPasien(q) {
   document.querySelector('tbody').innerHTML = rows.map(p=>`<tr>
     <td><span style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text3)">${p.kd_pasien}</span></td>
     <td class="strong">${p.nm_pasien}</td>
+    <td>${p.alamat||'—'}</td>
     <td>${p.telp||'—'}</td>
     <td>${p.is_member ? '<span class="badge badge-gold">✨ Member</span>' : '<span class="badge badge-gray">Umum</span>'}</td>
     <td>—</td>
@@ -6900,14 +6948,17 @@ async function ttlLanjutkan(no_faktur) {
 // ── LAPORAN PENJUALAN ────────────────────────────────
 let _lapAllRows = [];
 let _lapFilter  = null;   // {type:'metode'|'bank', metode, bank} | null
-let _lapSort    = { col: 'tanggal', dir: -1 };   // default: tanggal terbaru di atas
+// Default: data yg TERAKHIR MASUK ke sistem di atas (bukan sekadar tanggal terbaru) —
+// pakai `urut_masuk` (lihat komentar di app.py laporan_penjualan()), BUKAN tanggal,
+// krn transaksi yg tanggalnya sama tetap perlu urutan masuk yg benar.
+let _lapSort    = { col: 'urut_masuk', dir: -1 };
 
 pages['lap-penjualan'] = async () => {
   const today = todayLocal();
   const data = await api(`/api/laporan/penjualan?dari=${today}&sampai=${today}`);
   _lapAllRows = data.rows || [];
   _lapFilter  = null;
-  _lapSort    = { col: 'tanggal', dir: -1 };
+  _lapSort    = { col: 'urut_masuk', dir: -1 };
   const c = $('content');
   c.innerHTML = `
   <div style="display:flex;gap:12px;align-items:flex-end;margin-bottom:20px;flex-wrap:wrap;">
@@ -6918,6 +6969,7 @@ pages['lap-penjualan'] = async () => {
     <div><label>Cari Dokter</label><input id="lap-dokter" list="lap-dokter-list" placeholder="Nama dokter... (ikut filter tanggal/faktur)" style="width:230px" oninput="lapDokterSearch()">
       <datalist id="lap-dokter-list"></datalist>
     </div>
+    <div><label>Cari Pasien</label><input id="lap-pasien" placeholder="Nama pasien... (ikut filter tanggal/faktur)" style="width:230px" oninput="lapPasienSearch()"></div>
     <button class="btn btn-ghost" onclick="exportLapPenjualan()">📊 Export Excel</button>
     <div style="flex:1"></div>
     <div style="background:var(--gold-dim);border:1px solid var(--gold);border-radius:8px;padding:8px 16px;font-size:13px;color:var(--gold);">
@@ -6954,29 +7006,38 @@ function lapDokterSearch() {
   _lapDokterTimer = setTimeout(loadLapPenjualan, 320);
 }
 
+let _lapPasienTimer = null;
+function lapPasienSearch() {
+  clearTimeout(_lapPasienTimer);
+  _lapPasienTimer = setTimeout(loadLapPenjualan, 320);
+}
+
 function _lapBuildQs() {
   const d1 = $('lap-dari').value, d2 = $('lap-sampai').value;
   const fk = ($('lap-faktur')?.value || '').trim();
   const dk = ($('lap-dokter')?.value || '').trim();
-  // Pencarian dokter BERKAITAN dgn filter yg sedang aktif — selalu ditambahkan
+  const pk = ($('lap-pasien')?.value || '').trim();
+  // Pencarian dokter/pasien BERKAITAN dgn filter yg sedang aktif — selalu ditambahkan
   // di atas mode faktur ATAU mode rentang tanggal (bukan pengganti spt faktur
   // yg mengabaikan tanggal).
   let qs = fk ? `faktur=${encodeURIComponent(fk)}` : `dari=${d1}&sampai=${d2}`;
   if (dk) qs += `&dokter=${encodeURIComponent(dk)}`;
-  return { qs, fk, dk };
+  if (pk) qs += `&pasien=${encodeURIComponent(pk)}`;
+  return { qs, fk, dk, pk };
 }
 
 async function loadLapPenjualan() {
-  const { qs, fk, dk } = _lapBuildQs();
+  const { qs, fk, dk, pk } = _lapBuildQs();
   const data = await api(`/api/laporan/penjualan?${qs}`);
   _lapAllRows = data.rows || [];
   _lapFilter  = null;   // reset filter metode/bank tiap ganti mode/rentang/pencarian
-  _lapSort    = { col: 'tanggal', dir: -1 };
+  _lapSort    = { col: 'urut_masuk', dir: -1 };
   $('lap-total').textContent = fmt(data.total);
   $('lap-breakdown').innerHTML = renderLapBreakdown(data.per_metode, data.per_bank);
   const badges = [];
   if (fk) badges.push(`🔎 No faktur "<b style="color:var(--gold)">${fk}</b>" — rentang tanggal diabaikan`);
   if (dk) badges.push(`👨‍⚕️ Dokter "<b style="color:var(--gold)">${dk}</b>"`);
+  if (pk) badges.push(`🧑 Pasien "<b style="color:var(--gold)">${pk}</b>"`);
   $('lap-filter-bar').innerHTML = badges.length
     ? `<div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;flex-wrap:wrap;font-size:12px;color:var(--text3);">
          ${badges.join(' · ')} · ${_lapAllRows.length} transaksi
@@ -6994,6 +7055,7 @@ function exportLapPenjualan() {
 function lapResetFaktur() {
   const el = $('lap-faktur'); if (el) el.value = '';
   const dl = $('lap-dokter'); if (dl) dl.value = '';
+  const pl = $('lap-pasien'); if (pl) pl.value = '';
   _lapFilter = null;
   loadLapPenjualan();
 }
@@ -7079,18 +7141,23 @@ function lapSort(col) {
 
 function _lapSortRows(rows) {
   const { col, dir } = _lapSort;
+  const numCols = ['total_harga', 'urut_masuk'];
   return [...rows].sort((a, b) => {
     let va = a[col], vb = b[col];
-    if (col === 'total_harga') { va = va || 0; vb = vb || 0; }
+    if (numCols.includes(col)) { va = va || 0; vb = vb || 0; }
     else { va = (va || '').toString().toLowerCase(); vb = (vb || '').toString().toLowerCase(); }
     if (va < vb) return -1 * dir;
     if (va > vb) return 1 * dir;
-    // Tanggal sering sama utk banyak transaksi sehari — no_faktur jadi penentu kedua
-    // (searah dgn tanggal) supaya "terbaru di atas" benar2 konsisten, bukan cuma per-tanggal.
+    // Tanggal sering sama utk banyak transaksi sehari — `urut_masuk` (urutan baris
+    // R_Penjualan masuk ke sistem, 1 sequence global lintas SEMUA terminal) jadi penentu
+    // kedua, SEARAH dgn arah sort tanggal — klik Tanggal sekali: tanggal lama→baru &
+    // dalam 1 tanggal yg sama, yg masuk LEBIH DULU tampil lebih atas; klik lagi (arah
+    // dibalik): tanggal baru→lama & yg masuk TERAKHIR tampil lebih atas. JANGAN pakai
+    // no_faktur sbg tie-break (formatnya beda per terminal/kasir, bukan urutan waktu).
     if (col === 'tanggal') {
-      const fa = (a.no_faktur||'').toLowerCase(), fb = (b.no_faktur||'').toLowerCase();
-      if (fa < fb) return -1 * dir;
-      if (fa > fb) return 1 * dir;
+      const ua = a.urut_masuk || 0, ub = b.urut_masuk || 0;
+      if (ua < ub) return -1 * dir;
+      if (ua > ub) return 1 * dir;
     }
     return 0;
   });
@@ -7118,7 +7185,7 @@ function renderLapTable(rows) {
           <td style="font-family:'DM Mono',monospace;font-weight:600;">${fmt(r.total_harga)}</td>
           <td><span class="badge ${r.metode_bayar==='Internal'?'badge-gold':'badge-gray'}" ${r.metode_bayar==='Internal'?'title="Gratis — tidak dihitung omzet"':''}>${r.metode_bayar==='Internal'?'🎁 ':''}${r.metode_bayar||'Tunai'}</span>${r.metode_bayar==='Point Member' && r.point_dipakai ? `<div style="font-size:10px;color:#dc2626;font-weight:700;margin-top:2px;">${fmtNum(r.point_dipakai)} pt dipakai</div>` : ''}</td>
           <td><span class="badge ${r.status==='done'?'badge-green':'badge-gold'}">${r.status==='done'?'Selesai':'Proses'}</span></td>
-          <td style="white-space:nowrap;">${r.status==='done'?`<button class="btn btn-ghost btn-sm" title="Cetak ulang invoice — mis. struk fisik hilang" onclick="event.stopPropagation();reprintFaktur('${r.no_faktur}')">🖨 Cetak Ulang</button>`:''}</td>
+          <td style="white-space:nowrap;">${r.status==='done'?`<button class="btn btn-ghost btn-sm" title="Cetak ulang invoice — mis. struk fisik hilang" onclick="event.stopPropagation();reprintFaktur('${r.no_faktur}')">🖨 Cetak Ulang</button>`:''}${(r.status==='done' && r.tanggal===todayLocal() && r.metode_bayar!=='Point Member')?`<button class="btn btn-ghost btn-sm" title="Ubah metode pembayaran — hanya faktur hari ini" onclick="event.stopPropagation();bukaUbahMetode('${r.no_faktur}','${r.metode_bayar||'Tunai'}')">✎ Ubah Metode</button>`:''}</td>
         </tr>
         <tr id="lap-detail-${r.no_faktur}" style="display:none;">
           <td colspan="10" style="padding:0;background:var(--bg3);">
@@ -7129,6 +7196,42 @@ function renderLapTable(rows) {
         </tr>`).join('')}
     </tbody>
   </table>`;
+}
+
+// ── Ubah metode pembayaran (hanya faktur HARI INI, lihat app.py
+// penjualan_ubah_metode_bayar) — Point Member sengaja tidak ditawarkan di sini
+// (sudah difilter di tombolnya), krn ganti ke/dari situ butuh alur bayar penuh.
+const _METODE_BAYAR_EDITABLE = ['Tunai', 'Transfer', 'Debit', 'Internal'];
+function bukaUbahMetode(noFaktur, metodeLama) {
+  const opts = _METODE_BAYAR_EDITABLE.map(m =>
+    `<option value="${m}" ${m===metodeLama?'selected':''}>${m}</option>`).join('');
+  openModal('modal-generic', `
+    <div class="modal-title">Ubah Metode Pembayaran</div>
+    <div style="font-size:12.5px;color:var(--text3);margin-bottom:14px;">
+      Faktur <b style="color:var(--gold);font-family:'DM Mono',monospace;">${noFaktur}</b> — metode saat ini: <b>${metodeLama}</b>.
+      Hanya berlaku untuk faktur hari ini; kalau transaksi ini tadinya tersplit (lebih dari 1 metode),
+      akan diganti jadi 1 metode baru di bawah.
+    </div>
+    <div class="form-row"><label>Metode Baru</label>
+      <select id="ubah-metode-select" style="width:100%">${opts}</select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-generic')">Batal</button>
+      <button class="btn btn-primary" id="btn-ubah-metode-ok" onclick="simpanUbahMetode('${noFaktur}')">✓ Simpan</button>
+    </div>`);
+}
+async function simpanUbahMetode(noFaktur) {
+  const sel = $('ubah-metode-select');
+  const btn = $('btn-ubah-metode-ok');
+  const metode_bayar = sel?.value || 'Tunai';
+  btn.disabled = true; btn.textContent = 'Menyimpan…';
+  const res = await api(`/api/penjualan/${encodeURIComponent(noFaktur)}/metode-bayar`,
+    { method: 'PUT', body: { metode_bayar } });
+  btn.disabled = false; btn.textContent = '✓ Simpan';
+  if (!res || res.ok === false) { notif(res?.msg || 'Gagal mengubah metode bayar', 'error'); return; }
+  notif(`✓ Metode bayar faktur ${noFaktur} diubah ke ${metode_bayar}`);
+  closeModal('modal-generic');
+  loadLapPenjualan();
 }
 
 let _lapDetailOpen = {};
@@ -7781,7 +7884,7 @@ async function cetakResepDigitalDariHistori(id) {
     .ttd{width:110px;border-top:1px solid #111;padding-top:4px;text-align:center;margin-top:48px;margin-left:auto;font-size:11px;}
   </style></head><body>
   <div class="resep-wrap">
-  <div class="clinic"><h2>Rachel Clinic</h2><p style="font-size:10px;color:#444;">Klinik Kecantikan &amp; Kesehatan</p></div>
+  <div class="clinic"><h2>AppClinic</h2><p style="font-size:10px;color:#444;">Klinik Kecantikan &amp; Kesehatan</p></div>
   <div class="meta"><span>Tgl: ${tgl}</span><span>${data.no_resep}</span></div>
   <div class="pasien">
     <b>${data.nm_pasien||p?.nm_pasien||'—'}</b><br>
@@ -8150,7 +8253,7 @@ async function rmCetakRiwayat(kd) {
       .footer{margin-top:20px;text-align:center;font-size:10px;color:#978268;border-top:1px solid #e2dbd0;padding-top:10px;}
       @media print{body{padding:10px 16px;}}
     </style></head><body>
-    <h1>Rachel Clinic</h1>
+    <h1>AppClinic</h1>
     <div class="sub">Rekam Medik Pasien</div>
     <div class="pasien-block">
       <div class="pasien-name">${p.nm_pasien}</div>
@@ -8178,7 +8281,7 @@ async function rmCetakRiwayat(kd) {
         </div>
       </div>`;
     }).join('')}
-    <div class="footer">Rachel Clinic · Dokumen ini dicetak oleh sistem · ${new Date().toLocaleString('id-ID')}</div>
+    <div class="footer">AppClinic · Dokumen ini dicetak oleh sistem · ${new Date().toLocaleString('id-ID')}</div>
     </body></html>`);
   win.document.close();
   win.focus();
@@ -9175,7 +9278,7 @@ async function toggleKomisiDetail(kd, rowEl, dari, sampai) {
           return `<tr style="border-top:1px solid var(--border);${dim}">
           <td style="padding:7px 12px;">${fmtDt(r.tanggal,{dateOnly:true})}</td>
           <td style="padding:7px 12px;font-family:'DM Mono',monospace;font-size:11px;color:var(--gold);">${r.no_faktur}</td>
-          <td style="padding:7px 12px;font-weight:500;">${r.nm_pasien||r.kd_pasien||'—'}</td>
+          <td style="padding:7px 12px;font-weight:500;">${r.nm_pasien||'—'}${r.kd_pasien?` <span style="font-weight:400;color:var(--text3);font-family:'DM Mono',monospace;font-size:10px;">(${r.kd_pasien})</span>`:''}</td>
           <td style="padding:7px 12px;">${r.nm_pelayanan||'—'}${st?` <span style="font-size:9px;font-weight:700;padding:1px 7px;border-radius:9px;background:${st[1]}22;color:${st[1]};margin-left:4px;">${st[0]}</span>`:''}${handshakeLbl?`<div style="font-size:10px;color:${kBelumDipilih?'var(--warn)':'var(--rose)'};margin-top:2px;">${handshakeLbl}</div>`:''}</td>
           <td style="padding:7px 12px;text-align:right;font-family:'DM Mono',monospace;font-weight:700;color:${st?st[1]:'var(--teal)'};${st?'text-decoration:line-through;':''}">${fmt(r.komisi)}</td>
         </tr>`;
@@ -9393,7 +9496,7 @@ function cetakLapPoint() {
   table{width:100%;border-collapse:collapse;}th{background:#f0fdf4;border-bottom:2px solid #16a34a;padding:6px 8px;text-align:left;font-size:10px;text-transform:uppercase;color:#15803d;}
   td{padding:5px 8px;border-bottom:1px solid #eee;}.r{text-align:right;}.c{text-align:center;}
   tfoot td{border-top:2px solid #16a34a;font-weight:700;background:#f0fdf4;}</style></head><body>
-  <h1>Laporan Point Pasien — Rachel Clinic</h1>
+  <h1>Laporan Point Pasien — AppClinic</h1>
   <div class="sub">Akumulasi semua waktu${q?` · Pencarian: "${q}"`:''} · Formula ${fmt(_lapPointRate)} = 1 point · Dicetak ${new Date().toLocaleString('id-ID')}</div>
   <table><thead><tr><th>Pasien</th><th>Kode</th><th class="r">Point Masuk</th><th class="r">Point Keluar</th><th class="r">Saldo Total</th><th class="c">Transaksi</th><th>Terakhir</th></tr></thead>
   <tbody>${rows.map(r=>`<tr><td>${r.nm_pasien||'—'}</td><td>${r.kd_pasien}</td><td class="r">${nf(r.point_masuk)}</td><td class="r">${nf(r.point_keluar)}</td><td class="r">${nf(r.saldo_total)}</td><td class="c">${r.jml_transaksi}</td><td>${r.terakhir||'—'}</td></tr>`).join('')}</tbody>
@@ -9547,7 +9650,7 @@ pages['pengaturan'] = async () => {
 
 function simpanPrintMode() {
   const v = $('set-printmode')?.value || 'a5';
-  localStorage.setItem('rc_print_mode', v);
+  localStorage.setItem('ac_print_mode', v);
   notif('✓ Mode printer disimpan untuk komputer ini');
 }
 
@@ -9564,9 +9667,9 @@ function simpanResepPaperSize() {
   const h = parseFloat($('set-resep-h')?.value);
   const m = parseFloat($('set-resep-margin')?.value);
   if (!(w > 0) || !(h > 0) || !(m >= 0)) { notif('Isi lebar/tinggi/margin dengan angka yang valid', 'error'); return; }
-  localStorage.setItem('rc_resep_w', w);
-  localStorage.setItem('rc_resep_h', h);
-  localStorage.setItem('rc_resep_margin', m);
+  localStorage.setItem('ac_resep_w', w);
+  localStorage.setItem('ac_resep_h', h);
+  localStorage.setItem('ac_resep_margin', m);
   notif('✓ Ukuran kertas resep disimpan untuk komputer ini');
 }
 
@@ -9610,7 +9713,7 @@ async function simpanPenomoran() {
   });
   const res = await api('/api/pengaturan', {method:'PUT', body:{faktur_prefix:prefix, cabang_prefix}});
   if (!res.ok) { notif('Gagal menyimpan penomoran','error'); return; }
-  localStorage.setItem('rc_terminal_code', term);   // per komputer
+  localStorage.setItem('ac_terminal_code', term);   // per komputer
   notif('✓ Pengaturan penomoran disimpan');
 }
 
@@ -16643,7 +16746,7 @@ function fpFmtDate(d) {
 // ─── TEMA WARNA (preset, bukan dark mode — cuma ganti aksen warna) ────
 // Tiap preset override variabel CSS yang SUDAH ADA (--gold/--rose/--teal/--bg*/--text)
 // jadi tidak perlu ubah satupun CSS class di file ini — cukup timpa nilai variabelnya.
-const RC_THEMES = {
+const AC_THEMES = {
   gold: {
     label: 'Emas Klasik', dot: '#b08a44',
     vars: {} // default — tidak override apa-apa (kembali ke nilai asli di :root)
@@ -16685,18 +16788,18 @@ const RC_THEMES = {
 };
 
 function applyTheme(name, opts={}) {
-  const theme = RC_THEMES[name] || RC_THEMES.gold;
+  const theme = AC_THEMES[name] || AC_THEMES.gold;
   const root = document.documentElement.style;
   // Bersihkan dulu semua kemungkinan variabel yang pernah dioverride tema lain,
   // supaya ganti preset tidak nyisain nilai preset sebelumnya.
   const allKeys = new Set();
-  Object.values(RC_THEMES).forEach(t => Object.keys(t.vars).forEach(k => allKeys.add(k)));
+  Object.values(AC_THEMES).forEach(t => Object.keys(t.vars).forEach(k => allKeys.add(k)));
   allKeys.forEach(k => root.removeProperty(k));
   Object.entries(theme.vars).forEach(([k,v]) => root.setProperty(k, v));
-  if (!opts.silent) localStorage.setItem('rc_theme', name);
+  if (!opts.silent) localStorage.setItem('ac_theme', name);
 }
 function initTheme() {
-  applyTheme(localStorage.getItem('rc_theme') || 'gold', {silent:true});
+  applyTheme(localStorage.getItem('ac_theme') || 'gold', {silent:true});
 }
 function pilihTema(name) {
   applyTheme(name);
@@ -16706,8 +16809,8 @@ function pilihTema(name) {
 function renderTemaSwatches() {
   const el = $('sidebar-tema');
   if (!el) return;
-  const current = localStorage.getItem('rc_theme') || 'gold';
-  el.innerHTML = Object.entries(RC_THEMES).map(([key,t]) => `
+  const current = localStorage.getItem('ac_theme') || 'gold';
+  el.innerHTML = Object.entries(AC_THEMES).map(([key,t]) => `
     <div class="sidebar-tema-dot${current===key?' active':''}" title="${t.label}"
          style="background:${t.dot};" onclick="pilihTema('${key}')"></div>`).join('');
 }

@@ -3,7 +3,7 @@ import sqlite3, os, sys
 sys.stdout.reconfigure(encoding='utf-8')
 base = os.path.dirname(os.path.abspath(__file__))
 
-for name in ['rachel_clinic.db', 'rachel_clinicWH.db']:
+for name in ['appclinic.db', 'appclinicWH.db']:
     f = os.path.join(base, name)
     if not os.path.exists(f): continue
     print("="*64)

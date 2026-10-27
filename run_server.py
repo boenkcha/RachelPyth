@@ -1,5 +1,5 @@
 """
-Launcher SERVER Rachel Clinic (produksi).
+Launcher SERVER AppClinic (produksi).
 
 - Memakai waitress (server WSGI tangguh) bila tersedia.
 - Fallback ke server bawaan Flask bila waitress belum terpasang.
@@ -31,10 +31,10 @@ def get_lan_ip():
 def main():
     init_db()
     ip = get_lan_ip()
-    backend = os.environ.get('RC_DB_BACKEND', 'mysql').strip().lower()
+    backend = os.environ.get('AC_DB_BACKEND', 'mysql').strip().lower()
     bar = '=' * 58
     print(bar)
-    print('   RACHEL CLINIC  --  SERVER')
+    print('   APPCLINIC  --  SERVER')
     print(f'   Database       : {backend.upper()}')
     print(bar)
     print(f'   Komputer ini   : http://localhost:{PORT}')

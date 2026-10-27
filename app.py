@@ -27,7 +27,7 @@ active_sessions = {}   # token → user dict
 def get_current_user():
     token = request.headers.get('X-Token','') or request.headers.get('Authorization','').replace('Bearer ','')
     return active_sessions.get(token)
-DB_PATH    = os.path.join(_base_dir(), 'rachel_clinic.db')
+DB_PATH    = os.path.join(_base_dir(), 'appclinic.db')
 UPLOAD_DIR = os.path.join(_base_dir(), 'static', 'uploads', 'foto_pasien')
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 
@@ -39,25 +39,25 @@ except ImportError:
     HAS_PIL = False
 
 # ─── KONFIGURASI BACKEND DATABASE (SQLite default lama, MySQL baru) ──────────
-# Ganti balik ke SQLite kapan saja: RC_DB_BACKEND=sqlite python3 app.py
-DB_BACKEND = os.environ.get('RC_DB_BACKEND', 'mysql').strip().lower()  # 'sqlite' | 'mysql'
+# Ganti balik ke SQLite kapan saja: AC_DB_BACKEND=sqlite python3 app.py
+DB_BACKEND = os.environ.get('AC_DB_BACKEND', 'mysql').strip().lower()  # 'sqlite' | 'mysql'
 # Password MySQL TIDAK PUNYA default lagi (2026-10-26, sebelum repo ini dipublikasikan
-# ke GitHub) — WAJIB diset lewat env var RC_MYSQL_PASSWORD saat backend=mysql, supaya
+# ke GitHub) — WAJIB diset lewat env var AC_MYSQL_PASSWORD saat backend=mysql, supaya
 # tidak ada kredensial produksi tertanam di source code.
-_MYSQL_PASSWORD = os.environ.get('RC_MYSQL_PASSWORD', '')
+_MYSQL_PASSWORD = os.environ.get('AC_MYSQL_PASSWORD', '')
 if DB_BACKEND == 'mysql' and not _MYSQL_PASSWORD:
     raise RuntimeError(
-        "RC_MYSQL_PASSWORD wajib diset (env var) saat RC_DB_BACKEND=mysql — "
+        "AC_MYSQL_PASSWORD wajib diset (env var) saat AC_DB_BACKEND=mysql — "
         "tidak ada password default lagi demi keamanan. Contoh:\n"
-        "  RC_MYSQL_PASSWORD=xxxxx python3 app.py\n"
-        "(atau set RC_DB_BACKEND=sqlite kalau mau pakai SQLite tanpa MySQL)"
+        "  AC_MYSQL_PASSWORD=xxxxx python3 app.py\n"
+        "(atau set AC_DB_BACKEND=sqlite kalau mau pakai SQLite tanpa MySQL)"
     )
 MYSQL_CONFIG = dict(
-    host=os.environ.get('RC_MYSQL_HOST', 'localhost'),
-    port=int(os.environ.get('RC_MYSQL_PORT', '3306')),
-    user=os.environ.get('RC_MYSQL_USER', 'rachel_app'),
+    host=os.environ.get('AC_MYSQL_HOST', 'localhost'),
+    port=int(os.environ.get('AC_MYSQL_PORT', '3306')),
+    user=os.environ.get('AC_MYSQL_USER', 'appclinic_app'),
     password=_MYSQL_PASSWORD,
-    database=os.environ.get('RC_MYSQL_DB', 'rachel_clinic'),
+    database=os.environ.get('AC_MYSQL_DB', 'appclinic'),
     charset='utf8mb4',
 )
 
@@ -68,7 +68,7 @@ except ImportError:
     pymysql = None
 
 if DB_BACKEND == 'mysql' and pymysql is None:
-    raise RuntimeError("RC_DB_BACKEND=mysql tapi module 'pymysql' belum terinstall. Jalankan: pip install pymysql")
+    raise RuntimeError("AC_DB_BACKEND=mysql tapi module 'pymysql' belum terinstall. Jalankan: pip install pymysql")
 
 
 class DictRow:
@@ -815,10 +815,11 @@ def init_db_sqlite():
         )
     """)
     cur.execute("INSERT OR IGNORE INTO Lokasi VALUES ('INDUK','Apotek Induk','induk','',1)")
-    cur.execute("INSERT OR IGNORE INTO Lokasi VALUES ('CBG1','Klinik Rachel','cabang_dalam','',1)")
+    cur.execute("INSERT OR IGNORE INTO Lokasi VALUES ('CBG1','Klinik AppClinic','cabang_dalam','',1)")
     cur.execute("INSERT OR IGNORE INTO Lokasi VALUES ('CBG2','KIBAR','cabang_dalam','',1)")
-    # Rename nama lama CBG1 (Cabang Utama → Klinik Rachel) bila masih default
-    cur.execute("UPDATE Lokasi SET nm_lokasi='Klinik Rachel' WHERE kd_lokasi='CBG1' AND nm_lokasi='Cabang Utama'")
+    # Rename nama lama CBG1 (Cabang Utama → Klinik AppClinic) bila masih default
+    cur.execute("UPDATE Lokasi SET nm_lokasi='Klinik AppClinic' WHERE kd_lokasi='CBG1' AND nm_lokasi='Cabang Utama'")
+    cur.execute("UPDATE Lokasi SET nm_lokasi='Klinik AppClinic' WHERE kd_lokasi='CBG1' AND nm_lokasi='Klinik Rachel'")
 
     # Migrate: tambah kd_lokasi ke tabel yang ada
     for _sql in [
@@ -1241,7 +1242,7 @@ def init_db_sqlite():
     for _k, _v in [
         ('point_rate',   '50000'),
         ('faktur_prefix',''),
-        ('klinik_nama',  'Rachel Clinic'),
+        ('klinik_nama',  'AppClinic'),
         ('klinik_sub',   'Klinik Spesialis Kulit & Laser'),
         ('klinik_alamat','Jl. P. Diponegoro No. 92 Sumur Batu, Bandar Lampung'),
         ('klinik_telp',  'Telp. 0721-475600, 475601'),
@@ -2055,7 +2056,7 @@ def _seed_common_data(cur):
     otomatis saat DB_BACKEND=='mysql', jadi fungsi ini dipakai kedua backend."""
     cur.execute("INSERT OR IGNORE INTO Pengguna (username, password, nama, role) VALUES ('admin', 'admin123', 'Administrator', 'admin')")
     cur.execute("INSERT OR IGNORE INTO Lokasi VALUES ('INDUK','Apotek Induk','induk','',1)")
-    cur.execute("INSERT OR IGNORE INTO Lokasi VALUES ('CBG1','Klinik Rachel','cabang_dalam','',1)")
+    cur.execute("INSERT OR IGNORE INTO Lokasi VALUES ('CBG1','Klinik AppClinic','cabang_dalam','',1)")
     cur.execute("INSERT OR IGNORE INTO Lokasi VALUES ('CBG2','KIBAR','cabang_dalam','',1)")
     cur.execute("INSERT OR IGNORE INTO Induk_Pemilik VALUES ('P1','Induk Utama','Pemilik default (data lama)',1)")
     _seed_barang_master(cur)
@@ -2112,13 +2113,14 @@ def _seed_common_data(cur):
     for _k, _v in [
         ('point_rate',   '50000'),
         ('faktur_prefix',''),
-        ('klinik_nama',  'Rachel Clinic'),
+        ('klinik_nama',  'AppClinic'),
         ('klinik_sub',   'Klinik Spesialis Kulit & Laser'),
         ('klinik_alamat','Jl. P. Diponegoro No. 92 Sumur Batu, Bandar Lampung'),
         ('klinik_telp',  'Telp. 0721-475600, 475601'),
         ('klinik_kota',  'Bandar Lampung'),
     ]:
         cur.execute("INSERT OR IGNORE INTO Pengaturan (`key`,value) VALUES (?,?)", (_k, _v))
+    cur.execute("UPDATE Pengaturan SET value='AppClinic' WHERE `key`='klinik_nama' AND value='Rachel Clinic'")
 
 
 def init_db_mysql():
@@ -4677,7 +4679,7 @@ def penjualan_cetak_ulang(faktur):
             beautician_by_kd.setdefault(r['kd_pelayanan'], []).append(r['nickname'])
 
     items = [{
-        'nama': it['nm_barang'], 'jenis': it['jenis'],
+        'kd': it['kd_barang'], 'nama': it['nm_barang'], 'jenis': it['jenis'],
         'harga': it['harga'], 'disc': float(it['disc'] or 0), 'qty': it['qty'],
         'beautician': ', '.join(beautician_by_kd.get(it['kd_barang'], [])),
     } for it in items_raw]
@@ -4704,6 +4706,54 @@ def penjualan_cetak_ulang(faktur):
         'pembayaran': pembayaran,
     })
 
+# Metode yang boleh dipakai utk koreksi cepat metode bayar — SENGAJA TIDAK termasuk
+# 'Point Member' (ganti ke/dari situ butuh validasi saldo + jejak DetailPoint lewat
+# alur bayar_penjualan() yg sesungguhnya, bukan sekadar tukar nama metode) maupun
+# split (" + ", via Penjualan_Pembayaran — diselesaikan dgn menghapus baris split-nya,
+# bukan coba dipetakan otomatis ke 1 metode baru).
+_METODE_BAYAR_EDITABLE = {'Tunai', 'Transfer', 'Debit', 'Internal'}
+
+@app.route('/api/penjualan/<no_faktur>/metode-bayar', methods=['PUT'])
+def penjualan_ubah_metode_bayar(no_faktur):
+    """Koreksi metode pembayaran faktur yg SUDAH dibayar — HANYA utk faktur hari ini
+    (user: 'bisa merubah metode pembayaran jika faktur pada hari tersebut ingin
+    dirubah'), supaya tidak dipakai mengubah histori/laporan hari-hari lampau diam-diam.
+    Kalau faktur ini tadinya tersplit (ada baris Penjualan_Pembayaran), baris split itu
+    DIHAPUS & diganti 1 metode baru — bukan coba dipetakan otomatis."""
+    user = get_current_user()
+    role = user.get('role', '') if user else ''
+    if role not in ('admin', 'supervisor', 'kasir'):
+        return jsonify({'ok': False, 'msg': 'Hanya admin/supervisor/kasir'}), 403
+
+    header = query("SELECT * FROM Penjualan WHERE no_faktur=?", (no_faktur,), one=True)
+    if not header:
+        return jsonify({'ok': False, 'msg': 'Faktur tidak ditemukan'}), 404
+    if header['status'] != 'done':
+        return jsonify({'ok': False, 'msg': 'Hanya faktur yang sudah dibayar (status done) yang bisa dikoreksi di sini'}), 400
+    if header['tanggal'] != str(date.today()):
+        return jsonify({'ok': False, 'msg': 'Metode pembayaran hanya bisa diubah pada HARI YANG SAMA dengan transaksinya'}), 400
+
+    metode_lama = header['metode_bayar'] or 'Tunai'
+    metode_baru = (request.json or {}).get('metode_bayar', '').strip()
+    if metode_baru not in _METODE_BAYAR_EDITABLE:
+        return jsonify({'ok': False, 'msg': f"Metode baru harus salah satu dari: {', '.join(sorted(_METODE_BAYAR_EDITABLE))}"}), 400
+    if metode_lama == 'Point Member':
+        return jsonify({'ok': False, 'msg': "Faktur yang dibayar pakai Point Member tidak bisa diubah metodenya di sini (saldo point pasien sudah terpotong) — hubungi admin untuk koreksi manual."}), 400
+    if metode_lama == metode_baru and not query(
+            "SELECT 1 FROM Penjualan_Pembayaran WHERE no_faktur=?", (no_faktur,), one=True):
+        return jsonify({'ok': True, 'msg': 'Tidak ada perubahan'})
+
+    ada_split = query("SELECT 1 FROM Penjualan_Pembayaran WHERE no_faktur=?", (no_faktur,), one=True)
+    if ada_split:
+        execute("DELETE FROM Penjualan_Pembayaran WHERE no_faktur=?", (no_faktur,))
+    execute("UPDATE Penjualan SET metode_bayar=? WHERE no_faktur=?", (metode_baru, no_faktur))
+
+    catat_log('ubah_metode_bayar', 'Penjualan', no_faktur,
+              f"Metode bayar faktur {no_faktur} diubah dari '{metode_lama}' ke '{metode_baru}'"
+              + (' (sebelumnya tersplit, baris split dihapus)' if ada_split else ''),
+              data_lama={'metode_bayar': metode_lama}, data_baru={'metode_bayar': metode_baru})
+    return jsonify({'ok': True, 'metode_bayar': metode_baru})
+
 @app.route('/api/penjualan/item', methods=['POST'])
 def add_item_penjualan():
     d = request.json
@@ -4722,6 +4772,14 @@ def add_item_penjualan():
     if not existing:
         execute("INSERT INTO Penjualan (no_faktur,tanggal,total_harga,hpp,dokter,kd_pasien,kasir,status) VALUES (?,?,0,0,?,?,?,'open')",
                 (faktur, today, d.get('dokter',''), d.get('kd_pasien',''), d.get('kasir','')))
+    else:
+        # Pengaman anti-tabrakan nomor faktur (2 sesi POS beda — mis. kode terminal
+        # kebetulan sama — bisa dapat nomor faktur sama dari _reserve_or_reuse_faktur()):
+        # JANGAN diam² gabungkan item ke faktur yg ternyata milik pasien LAIN (dulu bikin
+        # data antar-transaksi "ketimpa-timpa"/tercampur, ditemukan 2026-10-27).
+        kd_pasien_baru = d.get('kd_pasien', '')
+        if kd_pasien_baru and existing['kd_pasien'] and kd_pasien_baru != existing['kd_pasien']:
+            return jsonify({'ok': False, 'msg': f"Nomor faktur {faktur} sudah dipakai transaksi pasien lain (kemungkinan tabrakan nomor faktur). Tutup & buka ulang POS untuk ambil nomor baru."}), 409
 
     # Add item
     last_id = execute("""INSERT INTO R_Penjualan
@@ -5511,7 +5569,14 @@ def bayar_penjualan():
         return jsonify({'ok': False, 'msg': 'Dokter wajib dipilih sebelum transaksi bisa dibayar'}), 400
 
     disc_trx = max(0.0, min(100.0, float(d.get('disc_trx', 0))))
-    penjualan_now = query("SELECT total_harga FROM Penjualan WHERE no_faktur=?", (faktur,), one=True)
+    header_cek = query("SELECT total_harga, kd_pasien FROM Penjualan WHERE no_faktur=?", (faktur,), one=True)
+    if header_cek and header_cek['kd_pasien'] and kd_pasien and header_cek['kd_pasien'] != kd_pasien:
+        # Pengaman anti-tabrakan nomor faktur — lihat catatan sama di simpan_racikan()/
+        # add_item_penjualan(). Di titik ini jarang kepicu (biasanya sudah ketahan lebih
+        # awal), tapi tetap dijaga supaya tidak ada jalur yg lolos membayar transaksi
+        # pasien lain pakai nomor faktur yg sama.
+        return jsonify({'ok': False, 'msg': f"Nomor faktur {faktur} sudah dipakai transaksi pasien lain (kemungkinan tabrakan nomor faktur). Tutup & buka ulang POS untuk ambil nomor baru."}), 409
+    penjualan_now = header_cek
     # Pengaman: kalau header belum ada (mis. transaksi hanya racikan), buat dulu & hitung total
     # dari R_Penjualan — supaya bayar tidak "sukses" tapi transaksi hilang dari laporan.
     if not penjualan_now:
@@ -6517,25 +6582,36 @@ def laporan_penjualan():
     tgl2 = request.args.get('sampai', str(date.today()))
     faktur = request.args.get('faktur', '').strip()
     dokter = request.args.get('dokter', '').strip()
+    pasien = request.args.get('pasien', '').strip()
     _sel = """
         SELECT p.no_faktur, p.tanggal, p.kd_pasien, ps.nm_pasien,
                p.dokter, p.total_harga AS total_harga_stored, p.metode_bayar, p.status,
                (SELECT SUM(rp.sub_total) FROM R_Penjualan rp
-                WHERE rp.no_faktur=p.no_faktur AND rp.jenis!='bahan_racikan') AS total_item
+                WHERE rp.no_faktur=p.no_faktur AND rp.jenis!='bahan_racikan') AS total_item,
+               -- `Penjualan` TIDAK punya kolom timestamp/id sendiri (PK-nya no_faktur).
+               -- MIN(id) R_Penjualan dipakai sbg penanda "urutan masuk" sungguhan (1 sequence
+               -- AUTOINCREMENT global lintas SEMUA terminal/kasir) — JANGAN pakai no_faktur
+               -- sbg proxy urutan (format {prefix}{terminal}{ddmmyy}{counter} beda per terminal,
+               -- perbandingan string antar kasir jadi acak, bukan urutan waktu asli).
+               (SELECT MIN(rp2.id) FROM R_Penjualan rp2 WHERE rp2.no_faktur=p.no_faktur) AS urut_masuk
         FROM Penjualan p LEFT JOIN Pasien ps ON p.kd_pasien=ps.kd_pasien
     """
-    # Pencarian dokter BERKAITAN dgn filter yg sedang aktif (bukan pengganti spt
+    # Pencarian dokter/pasien BERKAITAN dgn filter yg sedang aktif (bukan pengganti spt
     # pencarian no faktur yg mengabaikan rentang tanggal) — jadi selalu ditambahkan
     # sbg klausa AND tambahan, baik saat mode faktur maupun mode rentang tanggal.
     dokter_filter = " AND p.dokter LIKE ?" if dokter else ""
     dokter_param = [f'%{dokter}%'] if dokter else []
+    pasien_filter = " AND ps.nm_pasien LIKE ?" if pasien else ""
+    pasien_param = [f'%{pasien}%'] if pasien else []
+    extra_filter = dokter_filter + pasien_filter
+    extra_param = dokter_param + pasien_param
     if faktur:
         # Cari lintas semua periode berdasarkan no faktur — rentang tanggal diabaikan.
-        raw_rows = query(_sel + f" WHERE p.no_faktur LIKE ? {dokter_filter} ORDER BY p.tanggal DESC LIMIT 200",
-                         [f'%{faktur}%'] + dokter_param)
+        raw_rows = query(_sel + f" WHERE p.no_faktur LIKE ? {extra_filter} ORDER BY p.tanggal DESC LIMIT 200",
+                         [f'%{faktur}%'] + extra_param)
     else:
-        raw_rows = query(_sel + f" WHERE p.tanggal BETWEEN ? AND ? {dokter_filter} ORDER BY p.tanggal DESC",
-                         [tgl1, tgl2] + dokter_param)
+        raw_rows = query(_sel + f" WHERE p.tanggal BETWEEN ? AND ? {extra_filter} ORDER BY p.tanggal DESC",
+                         [tgl1, tgl2] + extra_param)
     # Sebagian faktur lama (migrasi) punya Penjualan.total_harga TIDAK SINKRON dgn
     # baris R_Penjualan aslinya (header 0 padahal item riil ada) — selalu percaya
     # SUM baris asli kalau tersedia, cuma fallback ke kolom lama kalau memang tidak
@@ -6601,6 +6677,7 @@ def laporan_penjualan_export():
     tgl2 = request.args.get('sampai', str(date.today()))
     faktur = request.args.get('faktur', '').strip()
     dokter = request.args.get('dokter', '').strip()
+    pasien = request.args.get('pasien', '').strip()
 
     # 1 query JOIN (bukan 1 query per faktur / N+1) — rentang bisa mencakup ratusan
     # ribu transaksi (data hasil migrasi), jadi wajib hindari round-trip per baris.
@@ -6613,10 +6690,14 @@ def laporan_penjualan_export():
         LEFT JOIN Pasien ps ON p.kd_pasien=ps.kd_pasien
         LEFT JOIN R_Penjualan rp ON rp.no_faktur=p.no_faktur
     """
-    # Sama spt endpoint JSON — pencarian dokter BERKAITAN dgn filter aktif (AND
+    # Sama spt endpoint JSON — pencarian dokter/pasien BERKAITAN dgn filter aktif (AND
     # tambahan), bukan pengganti spt pencarian no faktur yg mengabaikan tanggal.
     dokter_filter = " AND p.dokter LIKE ?" if dokter else ""
     dokter_param = [f'%{dokter}%'] if dokter else []
+    pasien_filter = " AND ps.nm_pasien LIKE ?" if pasien else ""
+    pasien_param = [f'%{pasien}%'] if pasien else []
+    extra_filter = dokter_filter + pasien_filter
+    extra_param = dokter_param + pasien_param
     if faktur:
         # MySQL tidak izinkan LIMIT langsung di dalam subquery IN — bungkus 1 lapis
         # derived table lagi supaya berlaku di kedua backend.
@@ -6624,12 +6705,12 @@ def laporan_penjualan_export():
                         SELECT no_faktur FROM (
                           SELECT no_faktur FROM Penjualan WHERE no_faktur LIKE ?
                           ORDER BY tanggal DESC LIMIT 200) t)
-                      {dokter_filter}
+                      {extra_filter}
                       ORDER BY p.tanggal DESC, p.no_faktur, rp.id""",
-                     [f'%{faktur}%'] + dokter_param)
+                     [f'%{faktur}%'] + extra_param)
     else:
-        rows = query(_sel + f" WHERE p.tanggal BETWEEN ? AND ? {dokter_filter} ORDER BY p.tanggal DESC, p.no_faktur, rp.id",
-                     [tgl1, tgl2] + dokter_param)
+        rows = query(_sel + f" WHERE p.tanggal BETWEEN ? AND ? {extra_filter} ORDER BY p.tanggal DESC, p.no_faktur, rp.id",
+                     [tgl1, tgl2] + extra_param)
     rows = rows_to_list(rows)
 
     _JENIS_LABEL = {'barang': 'Barang', 'jasa': 'Jasa', 'racikan': 'Racikan',
@@ -6859,7 +6940,7 @@ def laporan_komprehensif_export():
     # ── SHEET 1 — RINGKASAN ─────────────────────────────────────────
     ws0 = wb.active
     ws0.title = 'Ringkasan'
-    ws0['A1'] = 'LAPORAN AUDIT LENGKAP — RACHEL CLINIC'
+    ws0['A1'] = 'LAPORAN AUDIT LENGKAP — APPCLINIC'
     ws0['A1'].font = TITLE_FONT
     ws0['A2'] = f'Periode: {tgl1} s/d {tgl2}  ·  Dicetak: {datetime.now().strftime("%d/%m/%Y %H:%M")}'
     ws0['A2'].font = SUB_FONT
@@ -7798,10 +7879,17 @@ def simpan_racikan():
 
         # 0. Pastikan header Penjualan ada (racikan bisa jadi item pertama/satu-satunya
         #    dalam transaksi → tanpa ini header tak pernah terbuat & transaksi hilang dari laporan)
-        if not cur.execute("SELECT 1 FROM Penjualan WHERE no_faktur=?", (no_faktur,)).fetchone():
+        hdr_existing = cur.execute("SELECT kd_pasien FROM Penjualan WHERE no_faktur=?", (no_faktur,)).fetchone()
+        if not hdr_existing:
             cur.execute("""INSERT INTO Penjualan (no_faktur,tanggal,total_harga,hpp,dokter,kd_pasien,kasir,status)
                 VALUES (?,?,0,0,?,?,?,'open')""",
                 (no_faktur, today, d.get('dokter',''), kd_pasien, d.get('kasir','')))
+        elif hdr_existing[0] and hdr_existing[0] != kd_pasien:
+            # Pengaman anti-tabrakan nomor faktur (2 sesi POS beda bisa dapat nomor faktur
+            # sama — mis. kode terminal kebetulan sama — dari _reserve_or_reuse_faktur()):
+            # JANGAN diam² gabungkan racikan ke faktur yg ternyata milik pasien LAIN (dulu
+            # bikin data "ketimpa-timpa" antar transaksi, ditemukan 2026-10-27).
+            return jsonify({'ok': False, 'msg': f"Nomor faktur {no_faktur} sudah dipakai transaksi pasien lain (kemungkinan tabrakan nomor faktur). Tutup & buka ulang POS untuk ambil nomor baru."}), 409
 
         # 1. Simpan ResepRacikan
         cur.execute("""INSERT INTO ResepRacikan
@@ -8338,10 +8426,14 @@ def confirm_racikan_draft(id_resep):
 
         # Pastikan header Penjualan ada (racikan bisa jadi item satu-satunya → tanpa ini
         # transaksi hilang dari laporan penjualan walau stok sudah terpotong)
-        if not cur.execute("SELECT 1 FROM Penjualan WHERE no_faktur=?", (no_faktur,)).fetchone():
+        hdr_existing = cur.execute("SELECT kd_pasien FROM Penjualan WHERE no_faktur=?", (no_faktur,)).fetchone()
+        if not hdr_existing:
             cur.execute("""INSERT INTO Penjualan (no_faktur,tanggal,total_harga,hpp,dokter,kd_pasien,kasir,status)
                 VALUES (?,?,0,0,?,?,?,'open')""",
                 (no_faktur, today, d.get('dokter',''), resep['kd_pasien'], kasir))
+        elif hdr_existing[0] and hdr_existing[0] != resep['kd_pasien']:
+            # Pengaman anti-tabrakan nomor faktur — lihat catatan sama di simpan_racikan().
+            return jsonify({'ok': False, 'msg': f"Nomor faktur {no_faktur} sudah dipakai transaksi pasien lain (kemungkinan tabrakan nomor faktur). Tutup & buka ulang POS untuk ambil nomor baru."}), 409
 
         # Buat header R_Penjualan (jenis='racikan') — tampil di faktur
         cur.execute("""INSERT INTO R_Penjualan
@@ -11350,8 +11442,19 @@ def migrasi_stok_eksekusi():
         cur.execute("PRAGMA journal_mode = WAL")
         cur.execute("PRAGMA synchronous = NORMAL")
 
+        kd_lokasi_default = _migr_sv(defaults.get('kd_lokasi', 'CBG1'))
+        # Pemilik hanya relevan utk stok INDUK; ke cabang dikosongkan
+        pemilik_default = _migr_sv(defaults.get('pemilik', 'P1')) if kd_lokasi_default == 'INDUK' else ''
+
         if mode == 'replace':
-            cur.execute("DELETE FROM Stok_barang")
+            # SCOPE ke tujuan yg dipilih (kd_lokasi + pemilik) SAJA — JANGAN hapus seluruh
+            # tabel Stok_barang. Dulu replace menghapus SEMUA lokasi/pemilik sekaligus (bug
+            # ditemukan 2026-10-27: user import ulang stok 1 cabang/1 pemilik induk, tapi
+            # data cabang/pemilik LAIN yg tak ada hubungannya ikut lenyap). kd_lokasi WAJIB
+            # match persis; pemilik juga match persis (termasuk '' utk non-INDUK) supaya
+            # stok INDUK milik pemilik lain (mis. P2) tidak ikut terhapus saat replace P1.
+            cur.execute("DELETE FROM Stok_barang WHERE kd_lokasi=? AND pemilik=?",
+                        (kd_lokasi_default, pemilik_default))
             con.commit()
 
         sql = """INSERT OR IGNORE INTO Stok_barang
@@ -11359,10 +11462,6 @@ def migrasi_stok_eksekusi():
              stok_awal, stok_sisa, stok_gudang, stok_min,
              harga, disc, satuan, exp, DiscMem, DiscLain, kd_lokasi, pemilik)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"""
-
-        kd_lokasi_default = _migr_sv(defaults.get('kd_lokasi', 'CBG1'))
-        # Pemilik hanya relevan utk stok INDUK; ke cabang dikosongkan
-        pemilik_default = _migr_sv(defaults.get('pemilik', 'P1')) if kd_lokasi_default == 'INDUK' else ''
 
         buf      = []
         inserted = 0
@@ -12333,7 +12432,7 @@ def backup_restore_upload():
             first = json.loads(gz.readline().strip() or '{}')
         if not first.get('__meta__'):
             os.remove(tmp_path)
-            return jsonify({'ok': False, 'msg': 'File ini bukan hasil backup Rachel Clinic yang valid'}), 400
+            return jsonify({'ok': False, 'msg': 'File ini bukan hasil backup AppClinic yang valid'}), 400
     except Exception as e:
         try: os.remove(tmp_path)
         except Exception: pass
@@ -12363,7 +12462,7 @@ if __name__ == '__main__':
     except Exception:
         host_ip = '0.0.0.0'
     print(f"\n{'='*52}")
-    print(f"  Rachel Clinic Server")
+    print(f"  AppClinic Server")
     print(f"  Database                : {DB_BACKEND.upper()}")
     print(f"  Akses dari komputer ini : http://localhost:5000")
     print(f"  Akses dari komputer lain: http://{host_ip}:5000")

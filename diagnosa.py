@@ -1,5 +1,5 @@
 import sqlite3
-con = sqlite3.connect('rachel_clinic.db')
+con = sqlite3.connect('appclinic.db')
 con.row_factory = sqlite3.Row
 cur = con.cursor()
 

@@ -1,5 +1,5 @@
 import sqlite3
-con = sqlite3.connect("rachel_clinic.db")
+con = sqlite3.connect("appclinic.db")
 cur = con.cursor()
 
 # 1. Hapus item dengan stok = 0

@@ -1,4 +1,4 @@
-# Rachel Clinic — Sistem Manajemen
+# AppClinic — Sistem Manajemen
 
 Migrasi dari VB6 + MS Access ke Python 3 + SQLite + HTML (single-page app).
 
@@ -14,7 +14,7 @@ pip install flask
 
 ### 3. Jalankan server
 ```
-cd rachel_clinic
+cd appclinic
 python app.py
 ```
 
@@ -51,9 +51,9 @@ http://localhost:5000
 ## Struktur File
 
 ```
-rachel_clinic/
+appclinic/
 ├── app.py              ← Backend Flask + semua API
-├── rachel_clinic.db    ← Database SQLite (auto-dibuat)
+├── appclinic.db    ← Database SQLite (auto-dibuat)
 ├── requirements.txt
 ├── README.md
 └── static/
@@ -63,7 +63,7 @@ rachel_clinic/
 ## Database
 
 SQLite otomatis dibuat saat pertama kali `python app.py` dijalankan.  
-File: `rachel_clinic.db` (bisa dibuka dengan DB Browser for SQLite).
+File: `appclinic.db` (bisa dibuka dengan DB Browser for SQLite).
 
 ---
 

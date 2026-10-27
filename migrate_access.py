@@ -5,8 +5,8 @@
 import sqlite3, csv, os, sys, time
 from datetime import datetime
 
-MIGR_TEMP = r"d:\App Python\rachel_clinic\migr_temp"
-DB_PATH   = r"d:\App Python\rachel_clinic\rachel_clinic.db"
+MIGR_TEMP = r"d:\App Python\appclinic\migr_temp"
+DB_PATH   = r"d:\App Python\appclinic\appclinic.db"
 BATCH     = 2000   # INSERT batch size
 
 # ── date parser ─────────────────────────────────────────────
@@ -85,7 +85,7 @@ def main():
     cur.execute("PRAGMA synchronous = NORMAL")
 
     print("=" * 60)
-    print("  MIGRASI DATA RACHEL.MDB -> rachel_clinic.db")
+    print("  MIGRASI DATA RACHEL.MDB -> appclinic.db")
     print("=" * 60)
 
     # ── 1. BERSIHKAN TABEL (urutan FK-safe) ─────────────────

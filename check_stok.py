@@ -1,5 +1,5 @@
 import sqlite3
-con = sqlite3.connect("rachel_clinic.db")
+con = sqlite3.connect("appclinic.db")
 cur = con.cursor()
 cur.execute("SELECT COUNT(*) FROM Stok_barang WHERE kd_lokasi='INDUK'")
 print("Total stok INDUK:", cur.fetchone()[0])

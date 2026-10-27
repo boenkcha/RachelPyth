@@ -1,6 +1,6 @@
 import sqlite3
 
-con = sqlite3.connect("rachel_clinic.db")
+con = sqlite3.connect("appclinic.db")
 cur = con.cursor()
 cur.execute("PRAGMA foreign_keys = OFF")
 

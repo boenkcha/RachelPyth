@@ -1,11 +1,11 @@
-# Panduan Instalasi Rachel Clinic — Server (MySQL)
+# Panduan Instalasi AppClinic — Server (MySQL)
 
-Panduan memasang aplikasi Rachel Clinic sebagai **server** di sebuah komputer,
+Panduan memasang aplikasi AppClinic sebagai **server** di sebuah komputer,
 lalu diakses oleh komputer kasir lain lewat jaringan (LAN/WiFi).
 
 > **Update penting:** aplikasi ini sekarang berjalan di atas **MySQL** (bukan
 > lagi SQLite sebagai default). Backend bisa dikembalikan ke SQLite kapan saja
-> lewat env var `RC_DB_BACKEND=sqlite` (lihat bagian K), tapi panduan di bawah
+> lewat env var `AC_DB_BACKEND=sqlite` (lihat bagian K), tapi panduan di bawah
 > ini untuk jalur **MySQL** yang dipakai server produksi saat ini.
 
 ---
@@ -54,20 +54,20 @@ lalu diakses oleh komputer kasir lain lewat jaringan (LAN/WiFi).
 ### 3. Buat database & user aplikasi
 Buka **MySQL Command Line Client** (atau `mysql -u root -p` di terminal), lalu jalankan:
 ```sql
-CREATE DATABASE rachel_clinic CHARACTER SET utf8mb4;
-CREATE USER 'rachel_app'@'localhost' IDENTIFIED BY 'GANTI_PASSWORD_ANDA';
-GRANT ALL PRIVILEGES ON rachel_clinic.* TO 'rachel_app'@'localhost';
+CREATE DATABASE appclinic CHARACTER SET utf8mb4;
+CREATE USER 'appclinic_app'@'localhost' IDENTIFIED BY 'GANTI_PASSWORD_ANDA';
+GRANT ALL PRIVILEGES ON appclinic.* TO 'appclinic_app'@'localhost';
 FLUSH PRIVILEGES;
 ```
 > Ganti `GANTI_PASSWORD_ANDA` dengan password pilihan Anda sendiri. Aplikasi
 > **TIDAK punya password default** (lihat `MYSQL_CONFIG` di awal `app.py`) —
-> wajib set env var `RC_MYSQL_PASSWORD` dengan nilai yang SAMA PERSIS saat
+> wajib set env var `AC_MYSQL_PASSWORD` dengan nilai yang SAMA PERSIS saat
 > menjalankan server (lihat bagian K), kalau tidak server tidak akan mau jalan.
 
 ### 4. Salin folder aplikasi
 - Salin seluruh folder aplikasi (`app.py`, `static/`, `requirements.txt`, dst.)
-  ke komputer server, misalnya ke `C:\RachelClinic` (Windows) atau
-  `~/RachelClinic` (macOS/Linux).
+  ke komputer server, misalnya ke `C:\AppClinic` (Windows) atau
+  `~/AppClinic` (macOS/Linux).
 
 ### 5. Pasang dependensi Python
 Buka terminal/Command Prompt di folder aplikasi, lalu:
@@ -88,7 +88,7 @@ pip install -r requirements.txt
 python3 app.py
 ```
 Saat pertama kali dijalankan, aplikasi **otomatis membuat semua tabel** di
-database `rachel_clinic` yang sudah dibuat di langkah 3 (tidak perlu import
+database `appclinic` yang sudah dibuat di langkah 3 (tidak perlu import
 SQL manual). Akan muncul alamat seperti:
 ```
 Komputer ini   : http://localhost:5000
@@ -120,7 +120,7 @@ WiFi yang sama). Bisa juga lewat tombol QR "📱 Akses Mobile" di halaman Kasir/
 
 1. Buat file `jalankan_server.bat` isinya:
    ```bat
-   cd /d C:\RachelClinic
+   cd /d C:\AppClinic
    call .venv\Scripts\activate
    python app.py
    pause
@@ -151,15 +151,15 @@ Solusi: set IP statis di komputer server.
 
 ## G. Database & Backup
 
-- Semua data disimpan di **MySQL** (database `rachel_clinic`), bukan lagi 1 file.
+- Semua data disimpan di **MySQL** (database `appclinic`), bukan lagi 1 file.
 - **Backup rutin** (WAJIB, disarankan tiap akhir hari) via `mysqldump`:
   ```
-  mysqldump -u rachel_app -p rachel_clinic > backup_2026-09-11.sql
+  mysqldump -u appclinic_app -p appclinic > backup_2026-09-11.sql
   ```
   Simpan hasilnya ke flashdisk/cloud, jangan cuma di komputer server.
 - **Pulihkan backup** (di komputer baru/setelah masalah):
   ```
-  mysql -u rachel_app -p rachel_clinic < backup_2026-09-11.sql
+  mysql -u appclinic_app -p appclinic < backup_2026-09-11.sql
   ```
 - Foto pasien tersimpan terpisah sebagai file di folder `static/uploads/` —
   salin folder ini juga saat memindahkan/mem-backup ke komputer lain.
@@ -204,16 +204,16 @@ Set sebelum menjalankan `python3 app.py` (di terminal yang sama):
 
 | Variabel | Default | Kegunaan |
 |---|---|---|
-| `RC_DB_BACKEND` | `mysql` | Ganti ke `sqlite` utk pakai file lokal `rachel_clinic.db` (zero-config, tanpa install MySQL) |
-| `RC_MYSQL_HOST` | `localhost` | Alamat server MySQL (kalau MySQL di komputer lain) |
-| `RC_MYSQL_PORT` | `3306` | Port MySQL |
-| `RC_MYSQL_USER` | `rachel_app` | Username MySQL |
-| `RC_MYSQL_PASSWORD` | *(wajib diisi, tanpa default)* | Password MySQL — harus sama dgn yg dibuat di langkah 3 |
-| `RC_MYSQL_DB` | `rachel_clinic` | Nama database |
+| `AC_DB_BACKEND` | `mysql` | Ganti ke `sqlite` utk pakai file lokal `appclinic.db` (zero-config, tanpa install MySQL) |
+| `AC_MYSQL_HOST` | `localhost` | Alamat server MySQL (kalau MySQL di komputer lain) |
+| `AC_MYSQL_PORT` | `3306` | Port MySQL |
+| `AC_MYSQL_USER` | `appclinic_app` | Username MySQL |
+| `AC_MYSQL_PASSWORD` | *(wajib diisi, tanpa default)* | Password MySQL — harus sama dgn yg dibuat di langkah 3 |
+| `AC_MYSQL_DB` | `appclinic` | Nama database |
 
 Contoh (macOS/Linux), pakai password custom:
 ```
-RC_MYSQL_PASSWORD='password_baru_anda' python3 app.py
+AC_MYSQL_PASSWORD='password_baru_anda' python3 app.py
 ```
 
 ---
@@ -222,8 +222,8 @@ RC_MYSQL_PASSWORD='password_baru_anda' python3 app.py
 
 | Masalah | Solusi |
 |---------|--------|
-| `RuntimeError: RC_DB_BACKEND=mysql tapi module 'pymysql' belum terinstall` | Jalankan `pip install -r requirements.txt` di dalam virtual environment yang aktif. |
-| Server tidak bisa konek ke MySQL (`Can't connect to MySQL server`) | Pastikan service MySQL sedang berjalan; cek `RC_MYSQL_HOST`/port; pastikan user & password di langkah C.3 sudah benar. |
+| `RuntimeError: AC_DB_BACKEND=mysql tapi module 'pymysql' belum terinstall` | Jalankan `pip install -r requirements.txt` di dalam virtual environment yang aktif. |
+| Server tidak bisa konek ke MySQL (`Can't connect to MySQL server`) | Pastikan service MySQL sedang berjalan; cek `AC_MYSQL_HOST`/port; pastikan user & password di langkah C.3 sudah benar. |
 | Komputer kasir tidak bisa buka alamat server | Pastikan 1 jaringan; buka port 5000 di Firewall Windows/macOS; cek IP server dengan `ipconfig` (Windows) / `ifconfig` (macOS). |
 | "python bukan perintah dikenali" | Python belum ter-PATH. Install ulang Python, centang **Add Python to PATH**. |
 | Port 5000 dipakai aplikasi lain | Tutup aplikasi tsb, atau ubah baris `port=5000` di akhir `app.py`. |
@@ -238,4 +238,4 @@ Tutup jendela terminal server, atau tekan `CTRL + C` di dalamnya.
 
 ---
 
-*Rachel Clinic — Sistem Manajemen Klinik. Dokumen ini untuk instalasi server MySQL di komputer baru.*
+*AppClinic — Sistem Manajemen Klinik. Dokumen ini untuk instalasi server MySQL di komputer baru.*

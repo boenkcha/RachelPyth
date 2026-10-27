@@ -1,12 +1,12 @@
 """
-Migrasi data dari rachel_clinic.db (SQLite) ke MySQL (rachel_clinic).
+Migrasi data dari appclinic.db (SQLite) ke MySQL (appclinic).
 
 Jalankan SATU KALI setelah:
-1. Server pernah dijalankan minimal sekali dgn RC_DB_BACKEND=mysql
+1. Server pernah dijalankan minimal sekali dgn AC_DB_BACKEND=mysql
    (supaya init_db_mysql() sudah membuat semua tabel), ATAU jalankan
    langsung: python3 -c "import app; app.init_db_mysql()"
-2. Kredensial MySQL (rachel_app/rachel_clinic) sudah benar di app.py
-   (MYSQL_CONFIG) atau lewat env var RC_MYSQL_*.
+2. Kredensial MySQL (appclinic_app/appclinic) sudah benar di app.py
+   (MYSQL_CONFIG) atau lewat env var AC_MYSQL_*.
 
 Script ini AMAN dijalankan berkali-kali — tiap tabel di-TRUNCATE dulu
 sebelum diisi ulang dari SQLite (jadi selalu jadi salinan persis data
@@ -85,10 +85,10 @@ def migrate_table(sconn, mconn, table):
 
 def main():
     print("=" * 60)
-    print("Migrasi data SQLite -> MySQL (rachel_clinic)")
+    print("Migrasi data SQLite -> MySQL (appclinic)")
     print("=" * 60)
     if _app.DB_BACKEND != 'mysql':
-        print("[peringatan] RC_DB_BACKEND bukan 'mysql' saat ini, tapi migrasi")
+        print("[peringatan] AC_DB_BACKEND bukan 'mysql' saat ini, tapi migrasi")
         print("             tetap jalan ke MySQL_CONFIG yang terkonfigurasi.")
 
     sconn = _sqlite_connect()
