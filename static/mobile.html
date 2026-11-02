@@ -255,7 +255,7 @@ input.form-input:focus{border-color:var(--pink);box-shadow:0 0 0 3px var(--pink-
 <body>
 <!-- LOGIN OVERLAY -->
 <div id="login-overlay">
-  <div class="login-brand">APPCLINIC</div>
+  <div class="login-brand" id="login-brand">APPCLINIC</div>
   <div class="login-sub">Foto Pasien · Mobile</div>
   <div class="login-field">
     <label>Username</label>
@@ -319,6 +319,7 @@ const state = {
   detailPhoto: null,
   comparePhotos: { before: null, after: null },
   pendingDeleteId: null,
+  klinikNama: 'AppClinic',   // dimuat dari /api/pengaturan → Nama Klinik
 };
 
 // ── AUTH PERSISTENCE ──────────────────────────────────────
@@ -405,7 +406,7 @@ async function renderSearch(query='') {
   <div class="hdr">
     <div style="flex:1;">
       <div class="hdr-title">📸 Foto Pasien</div>
-      <div class="hdr-sub">${state.user?.nama || 'AppClinic'}</div>
+      <div class="hdr-sub">${state.user?.nama || state.klinikNama}</div>
     </div>
     <button class="hdr-action" onclick="doMobileLogout()" style="font-size:11px;opacity:.85">Keluar</button>
   </div>
@@ -1460,7 +1461,7 @@ function renderKomisi() {
   <div class="hdr">
     <div style="flex:1;">
       <div class="hdr-title">💰 Komisi Saya</div>
-      <div class="hdr-sub">${state.user?.nama || 'AppClinic'}</div>
+      <div class="hdr-sub">${state.user?.nama || state.klinikNama}</div>
     </div>
     <button class="hdr-action" onclick="doMobileLogout()" style="font-size:11px;opacity:.85">Keluar</button>
   </div>
@@ -1672,6 +1673,15 @@ async function validateSession() {
     const el = $('login-err'); if (el) el.textContent = 'Sesi berakhir, silakan login kembali';
   }
 }
+
+// Nama klinik di layar login/header — ambil dari Pengaturan → Nama Klinik
+// (endpoint publik, tak perlu login) supaya tidak tertinggal teks statis saat diganti.
+api('/api/pengaturan').then(s => {
+  if (!s || !s.klinik_nama) return;
+  state.klinikNama = s.klinik_nama;
+  document.title = s.klinik_nama + ' — Foto Pasien';
+  const lb = $('login-brand'); if (lb) lb.textContent = s.klinik_nama.toUpperCase();
+}).catch(()=>{});
 </script>
 </body>
 </html>

@@ -317,6 +317,13 @@ def get_point_redeem_rate():
     except (TypeError, ValueError):
         return 50000
 
+def is_point_enabled():
+    """Saklar on/off fitur point member, diatur lewat ⚙️ Pengaturan. Kalau OFF:
+    transaksi baru TIDAK lagi menghasilkan point & tidak bisa dibayar pakai Point
+    Member (lihat bayar_penjualan()) — tapi saldo point pasien yg SUDAH ADA dari
+    sebelumnya TIDAK dihapus/disentuh, cuma berhenti bertambah/dipakai selama OFF."""
+    return get_setting('point_enabled', '1') == '1'
+
 # ─── AKTIVITAS LOG (audit trail — pengaman anti-manipulasi) ──
 def catat_log(aksi, entitas='', ref='', keterangan='', data_lama=None, data_baru=None, actor=None):
     """Tulis 1 baris audit log. Dibungkus try/except — kegagalan logging TIDAK BOLEH
@@ -1241,6 +1248,7 @@ def init_db_sqlite():
     """)
     for _k, _v in [
         ('point_rate',   '50000'),
+        ('point_enabled','1'),
         ('faktur_prefix',''),
         ('klinik_nama',  'AppClinic'),
         ('klinik_sub',   'Klinik Spesialis Kulit & Laser'),
@@ -2112,6 +2120,7 @@ def _seed_common_data(cur):
 
     for _k, _v in [
         ('point_rate',   '50000'),
+        ('point_enabled','1'),
         ('faktur_prefix',''),
         ('klinik_nama',  'AppClinic'),
         ('klinik_sub',   'Klinik Spesialis Kulit & Laser'),
@@ -4692,12 +4701,24 @@ def penjualan_cetak_ulang(faktur):
         "SELECT metode, bank, nominal FROM Penjualan_Pembayaran WHERE no_faktur=? ORDER BY id",
         (faktur,)))
 
+    # Nama kasir utk tanda tangan "Hormat Kami" — kasir yg BENERAN memproses transaksi
+    # ini, BUKAN siapa pun yg sedang login & klik "Cetak Ulang" sekarang. Penjualan.kasir
+    # cuma terisi sekali saat item PERTAMA ditambahkan (lihat add_item_penjualan()), jadi
+    # biasanya sudah benar — tapi utk faktur lama/hasil migrasi yg kolom itu kosong,
+    # jatuh ke R_Penjualan.cashier (field sama, dicatat ulang per baris item) sbg cadangan.
+    kasir_cetak = header['kasir'] or ''
+    if not kasir_cetak:
+        ck = query("""SELECT cashier FROM R_Penjualan
+                      WHERE no_faktur=? AND cashier IS NOT NULL AND cashier!=''
+                      ORDER BY id LIMIT 1""", (faktur,), one=True)
+        kasir_cetak = ck['cashier'] if ck else ''
+
     return jsonify({
         'ok': True,
         'faktur':     header['no_faktur'],
         'tanggal':    header['tanggal'],
         'dokter':     header['dokter'] or '',
-        'kasir':      header['kasir'] or '',
+        'kasir':      kasir_cetak,
         'metode':     header['metode_bayar'] or 'Tunai',
         'discTrx':    header['disc_trx'] or 0,
         'nextVisit':  next_visit['next_tanggal'] if next_visit else '',
@@ -4711,7 +4732,7 @@ def penjualan_cetak_ulang(faktur):
 # alur bayar_penjualan() yg sesungguhnya, bukan sekadar tukar nama metode) maupun
 # split (" + ", via Penjualan_Pembayaran — diselesaikan dgn menghapus baris split-nya,
 # bukan coba dipetakan otomatis ke 1 metode baru).
-_METODE_BAYAR_EDITABLE = {'Tunai', 'Transfer', 'Debit', 'Internal'}
+_METODE_BAYAR_EDITABLE = {'Tunai', 'Transfer', 'Debit', 'QRIS', 'Internal'}
 
 @app.route('/api/penjualan/<no_faktur>/metode-bayar', methods=['PUT'])
 def penjualan_ubah_metode_bayar(no_faktur):
@@ -4848,6 +4869,37 @@ def update_item_disc():
                   + (f" — Pasien: {pasien_info}" if pasien_info else ''),
                   data_lama={'disc': row['disc'], 'sub_total': row['sub_total']},
                   data_baru={'disc': disc_pct, 'sub_total': new_sub})
+
+    execute("""UPDATE Penjualan SET
+        total_harga=(SELECT COALESCE(SUM(sub_total),0) FROM R_Penjualan
+                     WHERE no_faktur=? AND jenis!='bahan_racikan')
+        WHERE no_faktur=?""", (no_faktur, no_faktur))
+
+    return jsonify({'ok': True})
+
+@app.route('/api/penjualan/item-harga', methods=['PUT'])
+def update_item_harga():
+    """Update harga jual per item dalam satu transaksi (kd_barang + no_faktur) — khusus
+    transaksi ini saja, TIDAK menyentuh harga_jual di master Barang."""
+    d = request.json
+    no_faktur = d['no_faktur']
+    kd_barang = d['kd_barang']
+    harga     = float(d.get('harga', 0))
+    if harga <= 0:
+        return jsonify({'ok': False, 'msg': 'Harga harus lebih dari 0'}), 400
+
+    rows = query("SELECT * FROM R_Penjualan WHERE no_faktur=? AND kd_barang=? AND jenis IN ('barang','jasa','racikan')",
+                 (no_faktur, kd_barang))
+    for row in rows:
+        new_sub = harga * (1 - (float(row['disc'] or 0)) / 100) * row['qty']
+        execute("UPDATE R_Penjualan SET harga=?,sub_total=? WHERE id=?",
+                (harga, new_sub, row['id']))
+        pasien_info = _pasien_faktur(no_faktur)
+        catat_log('ubah_harga_item', 'R_Penjualan', no_faktur,
+                  f"Ubah harga jual '{kd_barang}' di faktur {no_faktur}: {row['harga']:g} → {harga:g}"
+                  + (f" — Pasien: {pasien_info}" if pasien_info else ''),
+                  data_lama={'harga': row['harga'], 'sub_total': row['sub_total']},
+                  data_baru={'harga': harga, 'sub_total': new_sub})
 
     execute("""UPDATE Penjualan SET
         total_harga=(SELECT COALESCE(SUM(sub_total),0) FROM R_Penjualan
@@ -5623,6 +5675,8 @@ def bayar_penjualan():
     else:
         mt0, bk0 = _split_metode_bank(metode)
         if mt0 == 'Point Member':
+            if not is_point_enabled():
+                return jsonify({'ok': False, 'msg': 'Fitur point member sedang dinonaktifkan — hubungi admin untuk mengaktifkannya di ⚙️ Pengaturan'}), 400
             if not kd_pasien:
                 return jsonify({'ok': False, 'msg': 'Pasien wajib dipilih untuk membayar pakai point'}), 400
             saldo_row = query("""SELECT COALESCE(SUM(debit),0)-COALESCE(SUM(kredit),0) as s
@@ -5687,8 +5741,9 @@ def bayar_penjualan():
 
     # Point member — earn point baru dari total belanja. Dikecualikan kalau faktur ini
     # SENDIRI dibayar pakai Point Member (keputusan desain: tidak boleh "muter" — point
-    # yg dipakai bayar tidak ikut menghasilkan point baru lagi).
-    if kd_pasien and not paid_via_point:
+    # yg dipakai bayar tidak ikut menghasilkan point baru lagi), atau kalau fitur point
+    # sedang dinonaktifkan lewat Pengaturan (saldo lama tetap utuh, cuma berhenti nambah).
+    if kd_pasien and not paid_via_point and is_point_enabled():
         penjualan = query("SELECT * FROM Penjualan WHERE no_faktur=?", (faktur,), one=True)
         if penjualan and penjualan['total_harga'] > 0:
             point_rate = get_point_rate()   # Rp per 1 point — dari Pengaturan (default 50.000)
@@ -5717,10 +5772,11 @@ def bayar_penjualan():
 # ─── PEMBELIAN ───────────────────────────────────────────────
 @app.route('/api/pembelian')
 def get_pembelian_list():
-    dari    = request.args.get('dari', '')
-    sampai  = request.args.get('sampai', '')
-    q       = request.args.get('q', '').strip()
-    status  = request.args.get('status', '')   # lunas | belum
+    dari     = request.args.get('dari', '')
+    sampai   = request.args.get('sampai', '')
+    q        = request.args.get('q', '').strip()
+    status   = request.args.get('status', '')   # lunas | belum
+    kd_lokasi = request.args.get('kd_lokasi', '').strip()  # kosong = semua lokasi (lama); diisi utk pisahkan Vendor(INDUK) vs Cabang
 
     # Default: hanya 2 hari terakhir (biar ringan). Saat ada pencarian (q), cari ke semua riwayat.
     if not dari and not q:
@@ -5738,6 +5794,8 @@ def get_pembelian_list():
         filters.append("lunas='Sudah'")
     elif status == 'belum':
         filters.append("lunas='Belum'")
+    if kd_lokasi:
+        filters.append("kd_lokasi=?"); params.append(kd_lokasi)
 
     where = ("WHERE " + " AND ".join(filters)) if filters else ""
     rows = query(f"""
@@ -5758,6 +5816,7 @@ def laporan_pembelian():
     sampai  = request.args.get('sampai', '')
     q       = request.args.get('q', '').strip()
     status  = request.args.get('status', '')
+    kd_lokasi = request.args.get('kd_lokasi', '').strip()
     today   = str(date.today())
     week_later  = (date.today() + timedelta(days=7)).isoformat()
     month_later = (date.today() + timedelta(days=30)).isoformat()
@@ -5774,6 +5833,8 @@ def laporan_pembelian():
         filters.append("pb.lunas='Belum'")
     elif status == 'overdue':
         filters.append(f"pb.lunas='Belum' AND pb.tempo!='' AND pb.tempo < '{today}'")
+    if kd_lokasi:
+        filters.append("pb.kd_lokasi=?"); params.append(kd_lokasi)
 
     where = ("WHERE " + " AND ".join(filters)) if filters else ""
     rows = query(f"""
@@ -5957,7 +6018,12 @@ def add_item_pembelian():
     nm_suplier   = d.get('nm_suplier', '')
     sistem_bayar = d.get('sistem_bayar', 'Kredit')
     tempo        = d.get('tempo', today)
-    exp          = d.get('exp', today)
+    # exp dari <input type="date"> frontend selalu ISO 'YYYY-MM-DD' — WAJIB dinormalkan
+    # ke format baku app ini ('M/D/YYYY', lihat _exp_key/_ki_tgl) SEBELUM disimpan, sama
+    # persis pola yg sudah dipakai exp_bermasalah_perbaiki()/input_stok_manual(). Kalau
+    # tidak, exp ini akan lolos sbg 'format asing' yg tak dikenali _exp_key() → FEFO
+    # diam-diam menganggap batch ini TAK PERNAH EXPIRED begitu faktur ini di-approve.
+    exp          = _ki_tgl(d.get('exp', today)) or _ki_tgl(today)
     pemilik      = (d.get('pemilik') or 'P1').strip()   # stok induk ini ditujukan ke pemilik mana
 
     existing_h = query("SELECT no_faktur, status FROM Pembelian WHERE no_faktur=?", (faktur,), one=True)
@@ -6141,6 +6207,165 @@ def delete_pembelian(faktur):
     return jsonify({'ok': True})
 
 
+# ─── PEMBELIAN CABANG — sama spt Pembelian Vendor TAPI stok masuk LANGSUNG ────
+# ke Stok Cabang (tanpa gerbang approval, tanpa pemilik — itu konsep khusus
+# Stok Induk). Tabel/field dipakai bersama (Pembelian/R_Pembelian), dibedakan
+# via Pembelian.kd_lokasi (!='INDUK'). Faktur pakai prefix 'PBC' sendiri biar
+# tak berbagi counter dgn Pembelian Vendor (prefix 'PB').
+@app.route('/api/pembelian-cabang/next-faktur')
+def pembelian_cabang_next_faktur():
+    today = str(date.today())
+    ymd   = today.replace('-', '')[2:]          # YYMMDD
+    last  = query("SELECT no_faktur FROM Pembelian WHERE no_faktur LIKE ? ORDER BY no_faktur DESC LIMIT 1",
+                  (f'PBC{ymd}%',), one=True)
+    seq   = (int(last['no_faktur'][-3:]) + 1) if last else 1
+    return jsonify({'faktur': f'PBC{ymd}{seq:03d}', 'tanggal': today})
+
+
+@app.route('/api/pembelian-cabang/item', methods=['POST'])
+def add_item_pembelian_cabang():
+    d          = request.json
+    faktur     = d['no_faktur']
+    blok = _pembelian_edit_guard(faktur)
+    if blok: return blok
+    today      = str(date.today())
+    harga_asli = float(d.get('harga_asli', 0))
+    disc       = float(d.get('disc', 0))
+    ppn        = float(d.get('ppn', 0))
+    qty        = int(d.get('qty', 1))
+    har_disc, har_ppn, sub_total = _hitung_harga_pembelian(harga_asli, disc, ppn, qty)
+
+    kd_suplier   = d.get('kd_suplier', '')
+    nm_suplier   = d.get('nm_suplier', '')
+    sistem_bayar = d.get('sistem_bayar', 'Kredit')
+    tempo        = d.get('tempo', today)
+    # exp dari <input type="date"> frontend selalu ISO 'YYYY-MM-DD' — normalkan ke
+    # format baku app ini ('M/D/YYYY') SEBELUM disimpan, lihat catatan sama di
+    # add_item_pembelian() (Vendor) persis di atas untuk alasan lengkapnya.
+    exp          = _ki_tgl(d.get('exp', today)) or _ki_tgl(today)
+    kd_barang    = d['kd_barang']
+    nm_barang    = d['nm_barang']
+    satuan       = d.get('satuan', 'Pcs')
+    user         = get_current_user()
+    by           = (user or {}).get('nama', '')
+    kd_lokasi    = (d.get('kd_lokasi') or '').strip() or (user or {}).get('kd_lokasi') or 'CBG1'
+
+    existing_h = query("SELECT no_faktur, status FROM Pembelian WHERE no_faktur=?", (faktur,), one=True)
+    if not existing_h:
+        lunas = 'Sudah' if sistem_bayar == 'Cash' else 'Belum'
+        execute("""INSERT INTO Pembelian (no_faktur,tanggal,total_harga,sistem_bayar,lunas,tempo,nm_suplier,kd_lokasi,status,dibuat_oleh)
+                   VALUES (?,?,0,?,?,?,?,?,'approved',?)""",
+                (faktur, today, sistem_bayar, lunas, tempo, nm_suplier, kd_lokasi, by))
+    elif (existing_h['status'] or 'approved') not in ('approved', 'draft', 'rejected'):
+        return jsonify({'ok': False,
+            'msg': f"Faktur ini berstatus '{existing_h['status']}' — tidak bisa menambah item lagi."}), 400
+
+    existing = query("SELECT id FROM R_Pembelian WHERE no_faktur=? AND kd_barang=? AND exp=?",
+                     (faktur, kd_barang, exp), one=True)
+    if existing:
+        execute("UPDATE R_Pembelian SET qty=qty+?,sub_total=sub_total+? WHERE id=?",
+                (qty, sub_total, existing['id']))
+    else:
+        execute("""INSERT INTO R_Pembelian
+                   (no_faktur,tanggal,kd_suplier,nm_suplier,sistem_bayar,kd_barang,nm_barang,
+                    disc,harga_beli_kotor,harga_beli_bersih,sub_total,ppn,tempo,qty,harga_asli,satuan,exp)
+                   VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (faktur, today, kd_suplier, nm_suplier, sistem_bayar,
+                 kd_barang, nm_barang, disc, har_disc, har_ppn,
+                 sub_total, ppn, tempo, qty, harga_asli, satuan, exp))
+
+    execute("UPDATE Pembelian SET total_harga=(SELECT COALESCE(SUM(sub_total),0) FROM R_Pembelian WHERE no_faktur=?) WHERE no_faktur=?",
+            (faktur, faktur))
+
+    # Beda dgn Pembelian Vendor: TIDAK ada gerbang approval — stok masuk ke
+    # Stok Cabang seketika item ditambahkan.
+    con = get_db()
+    try:
+        cur = con.cursor()
+        _stok_cabang_masuk(cur, kd_barang, nm_barang, exp, qty, har_disc, kd_lokasi,
+                           faktur, 'pembelian_cabang', by, kd_lokasi_dari='LUAR')
+        con.commit()
+    except Exception as e:
+        con.rollback()
+        return jsonify({'ok': False, 'msg': f'Gagal posting stok: {e}'}), 500
+    finally:
+        con.close()
+
+    item = query("SELECT id FROM R_Pembelian WHERE no_faktur=? AND kd_barang=? AND exp=?",
+                 (faktur, kd_barang, exp), one=True)
+    return jsonify({'ok': True, 'id': item['id'] if item else None,
+                    'harga_beli': har_disc, 'sub_total': sub_total})
+
+
+@app.route('/api/pembelian-cabang/item/<int:id>', methods=['DELETE'])
+def delete_item_pembelian_cabang(id):
+    item = query("SELECT * FROM R_Pembelian WHERE id=?", (id,), one=True)
+    if not item:
+        return jsonify({'ok': False, 'msg': 'Item tidak ditemukan'}), 404
+    blok = _pembelian_edit_guard(item['no_faktur'])
+    if blok: return blok
+    head = query("SELECT kd_lokasi FROM Pembelian WHERE no_faktur=?", (item['no_faktur'],), one=True)
+    kd_lokasi = (head['kd_lokasi'] if head and head['kd_lokasi'] else 'CBG1')
+
+    stok = query("SELECT COALESCE(SUM(stok_sisa),0) as s FROM Stok_barang WHERE kd_barang=? AND exp=? AND kd_lokasi=?",
+                 (item['kd_barang'], item['exp'], kd_lokasi), one=True)
+    sisa = stok['s'] if stok else 0
+    if sisa < item['qty']:
+        return jsonify({'ok': False,
+            'msg': f"Barang '{item['nm_barang']}' dari pembelian ini sudah terjual/terpakai di stok cabang "
+                   f"(stok tersisa lebih sedikit dari qty pembelian) — tidak bisa dihapus langsung."}), 409
+
+    execute("""UPDATE Stok_barang SET stok_awal=MAX(0,stok_awal-?),stok_sisa=MAX(0,stok_sisa-?),stok_gudang=MAX(0,stok_gudang-?)
+               WHERE kd_barang=? AND exp=? AND kd_lokasi=?""",
+            (item['qty'], item['qty'], item['qty'], item['kd_barang'], item['exp'], kd_lokasi))
+    execute("DELETE FROM R_Pembelian WHERE id=?", (id,))
+    execute("UPDATE Pembelian SET total_harga=(SELECT COALESCE(SUM(sub_total),0) FROM R_Pembelian WHERE no_faktur=?) WHERE no_faktur=?",
+            (item['no_faktur'], item['no_faktur']))
+    execute("INSERT INTO RiwayatBarang (tanggal,kd_barang,exp,keterangan,nilai,saldo_e,saldo_g) VALUES (?,?,?,?,?,?,?)",
+            (str(date.today()), item['kd_barang'], item['exp'],
+             f"Hapus item beli cabang {item['no_faktur']}", -item['qty'], 0, 0))
+    execute("""INSERT INTO Transfer_Stok_Log (no_referensi,tipe_referensi,kd_barang,nm_barang,kd_lokasi_dari,kd_lokasi_ke,qty,exp,created_by)
+               VALUES (?,?,?,?,?,?,?,?,?)""",
+            (item['no_faktur'], 'pembelian_cabang_hapus', item['kd_barang'], item['nm_barang'], kd_lokasi, '', item['qty'], item['exp'],
+             (get_current_user() or {}).get('nama', '')))
+    return jsonify({'ok': True})
+
+
+@app.route('/api/pembelian-cabang/<faktur>', methods=['DELETE'])
+def delete_pembelian_cabang(faktur):
+    blok = _pembelian_edit_guard(faktur)
+    if blok: return blok
+    items = query("SELECT * FROM R_Pembelian WHERE no_faktur=?", (faktur,))
+    today = str(date.today())
+    head  = query("SELECT kd_lokasi FROM Pembelian WHERE no_faktur=?", (faktur,), one=True)
+    kd_lokasi = (head['kd_lokasi'] if head and head['kd_lokasi'] else 'CBG1')
+
+    bermasalah = []
+    for item in items:
+        stok = query("SELECT COALESCE(SUM(stok_sisa),0) as s FROM Stok_barang WHERE kd_barang=? AND exp=? AND kd_lokasi=?",
+                     (item['kd_barang'], item['exp'], kd_lokasi), one=True)
+        if (stok['s'] if stok else 0) < item['qty']:
+            bermasalah.append(item['nm_barang'])
+    if bermasalah:
+        return jsonify({'ok': False,
+            'msg': f"Faktur ini tidak bisa dihapus langsung — barang berikut sudah terjual/terpakai di stok cabang: "
+                   f"{', '.join(bermasalah)}."}), 409
+
+    by = (get_current_user() or {}).get('nama', '')
+    for item in items:
+        execute("""UPDATE Stok_barang SET stok_awal=MAX(0,stok_awal-?),stok_sisa=MAX(0,stok_sisa-?),stok_gudang=MAX(0,stok_gudang-?)
+                   WHERE kd_barang=? AND exp=? AND kd_lokasi=?""",
+                (item['qty'], item['qty'], item['qty'], item['kd_barang'], item['exp'], kd_lokasi))
+        execute("INSERT INTO RiwayatBarang (tanggal,kd_barang,exp,keterangan,nilai,saldo_e,saldo_g) VALUES (?,?,?,?,?,?,?)",
+                (today, item['kd_barang'], item['exp'], f"Batal beli cabang {faktur}", -item['qty'], 0, 0))
+        execute("""INSERT INTO Transfer_Stok_Log (no_referensi,tipe_referensi,kd_barang,nm_barang,kd_lokasi_dari,kd_lokasi_ke,qty,exp,created_by)
+                   VALUES (?,?,?,?,?,?,?,?,?)""",
+                (faktur, 'pembelian_cabang_hapus', item['kd_barang'], item['nm_barang'], kd_lokasi, '', item['qty'], item['exp'], by))
+    execute("DELETE FROM R_Pembelian WHERE no_faktur=?", (faktur,))
+    execute("DELETE FROM Pembelian WHERE no_faktur=?", (faktur,))
+    return jsonify({'ok': True})
+
+
 # ─── KOREKSI PEMBELIAN (barang sudah terdistribusi) — butuh approval ─
 @app.route('/api/pembelian/koreksi', methods=['POST'])
 def ajukan_koreksi_pembelian():
@@ -6262,17 +6487,38 @@ def get_barang_beli():
     # exact-match/join presisi) — LOWER() di kedua sisi wajib spy pencarian tetap
     # case-insensitive spt kolom lain (lihat _kata_cocok_kolom() utk penjelasan lengkap).
     q = request.args.get('q', '')
+    kd_lokasi = request.args.get('kd_lokasi', '').strip() or 'INDUK'
     like = f'%{q.lower()}%'
+    # Suggest harga beli: prioritaskan harga TRANSAKSI PEMBELIAN TERAKHIR utk barang
+    # ini di lokasi yg sama (paling akurat/terkini — harga di Stok_barang bisa basi
+    # kalau batch lama sudah habis terjual tapi harga belum pernah dicatat ulang).
+    # Baru kalau belum pernah ada riwayat pembelian sama sekali, jatuh ke harga_beli
+    # yg tercatat di Stok_barang (perilaku lama).
+    # Subquery WHERE+LIMIT dijalankan DULU di tabel ringan (tanpa subquery harga/stok)
+    # lewat derived table "b" di bawah, baru 3 lookup harga/stok yg lumayan berat itu
+    # dikorelasikan ke hasil AKHIRNYA (maks 20 baris) — bukan ke tiap baris yg cocok
+    # LIKE sebelum di-LIMIT. Kalau tidak, kueri utk huruf umum (mis. 1-2 karakter) bisa
+    # menjalankan 3 subquery itu utk ratusan baris dulu baru dibuang, lambat di DB besar.
     rows = query("""
         SELECT b.kd_barang, b.nm_barang, b.nm_generik, b.satuan, b.harga_jual,
-               COALESCE((SELECT MAX(harga_beli) FROM Stok_barang s
-                         WHERE s.kd_barang=b.kd_barang AND s.kd_lokasi='INDUK'),0) AS harga_beli,
+               COALESCE(
+                 (SELECT rp.harga_asli FROM R_Pembelian rp
+                  JOIN Pembelian p2 ON p2.no_faktur = rp.no_faktur
+                  WHERE rp.kd_barang = b.kd_barang AND p2.kd_lokasi = ?
+                  ORDER BY rp.id DESC LIMIT 1),
+                 (SELECT MAX(harga_beli) FROM Stok_barang s
+                  WHERE s.kd_barang=b.kd_barang AND s.kd_lokasi=?),
+                 0
+               ) AS harga_beli,
                COALESCE((SELECT SUM(stok_sisa) FROM Stok_barang s
-                         WHERE s.kd_barang=b.kd_barang AND s.kd_lokasi='INDUK'),0) AS total_stok
-        FROM Barang b
-        WHERE b.aktif=1 AND (LOWER(b.kd_barang) LIKE ? OR LOWER(b.nm_barang) LIKE ? OR LOWER(b.nm_generik) LIKE ?)
-        ORDER BY b.nm_barang LIMIT 20
-    """, (like, like, like))
+                         WHERE s.kd_barang=b.kd_barang AND s.kd_lokasi=?),0) AS total_stok
+        FROM (
+          SELECT kd_barang, nm_barang, nm_generik, satuan, harga_jual
+          FROM Barang
+          WHERE aktif=1 AND (LOWER(kd_barang) LIKE ? OR LOWER(nm_barang) LIKE ? OR LOWER(nm_generik) LIKE ?)
+          ORDER BY nm_barang LIMIT 20
+        ) b
+    """, (kd_lokasi, kd_lokasi, kd_lokasi, like, like, like))
     return jsonify(rows_to_list(rows))
 
 
@@ -6585,7 +6831,8 @@ def laporan_penjualan():
     pasien = request.args.get('pasien', '').strip()
     _sel = """
         SELECT p.no_faktur, p.tanggal, p.kd_pasien, ps.nm_pasien,
-               p.dokter, p.total_harga AS total_harga_stored, p.metode_bayar, p.status,
+               p.dokter, dk.nickname AS dokter_nickname,
+               p.total_harga AS total_harga_stored, p.metode_bayar, p.status,
                (SELECT SUM(rp.sub_total) FROM R_Penjualan rp
                 WHERE rp.no_faktur=p.no_faktur AND rp.jenis!='bahan_racikan') AS total_item,
                -- `Penjualan` TIDAK punya kolom timestamp/id sendiri (PK-nya no_faktur).
@@ -6595,6 +6842,7 @@ def laporan_penjualan():
                -- perbandingan string antar kasir jadi acak, bukan urutan waktu asli).
                (SELECT MIN(rp2.id) FROM R_Penjualan rp2 WHERE rp2.no_faktur=p.no_faktur) AS urut_masuk
         FROM Penjualan p LEFT JOIN Pasien ps ON p.kd_pasien=ps.kd_pasien
+                         LEFT JOIN Karyawan dk ON dk.nm_karyawan=p.dokter
     """
     # Pencarian dokter/pasien BERKAITAN dgn filter yg sedang aktif (bukan pengganti spt
     # pencarian no faktur yg mengabaikan rentang tanggal) — jadi selalu ditambahkan
@@ -7219,6 +7467,7 @@ def get_pengaturan():
     out = {k: get_setting(k, '') for k in _SETTING_KEYS}
     out['point_rate'] = get_point_rate()
     out['point_redeem_rate'] = get_point_redeem_rate()
+    out['point_enabled'] = is_point_enabled()
     has_logo, logo_url = _logo_info()
     out['has_logo'] = has_logo
     out['logo_url'] = logo_url
@@ -7335,11 +7584,23 @@ def upload_logo():
 # ─── PENGATURAN POINT ────────────────────────────────
 @app.route('/api/pengaturan/point', methods=['GET'])
 def get_point_setting():
-    return jsonify({'point_rate': get_point_rate(), 'point_redeem_rate': get_point_redeem_rate()})
+    return jsonify({'point_rate': get_point_rate(), 'point_redeem_rate': get_point_redeem_rate(),
+                     'point_enabled': is_point_enabled()})
 
 @app.route('/api/pengaturan/point', methods=['PUT'])
 def set_point_setting():
     d = request.json or {}
+    # Saklar on/off (opsional, field terpisah) — boleh dikirim sendirian tanpa
+    # rate/redeem_rate, dipakai toggle cepat dari kartu "💎 Point Member" di Pengaturan.
+    enabled = is_point_enabled()
+    if 'point_enabled' in d:
+        enabled = bool(d.get('point_enabled'))
+        set_setting('point_enabled', '1' if enabled else '0')
+        catat_log('pengaturan_point_toggle', 'Pengaturan', '',
+                  f"Fitur point member {'diaktifkan' if enabled else 'dinonaktifkan'}")
+        if 'point_rate' not in d:
+            return jsonify({'ok': True, 'point_rate': get_point_rate(),
+                             'point_redeem_rate': get_point_redeem_rate(), 'point_enabled': enabled})
     try:
         rate = float(d.get('point_rate'))
     except (TypeError, ValueError):
@@ -7357,7 +7618,7 @@ def set_point_setting():
         if redeem_rate <= 0:
             return jsonify({'ok': False, 'msg': 'Kurs redeem harus lebih besar dari 0'}), 400
         set_setting('point_redeem_rate', redeem_rate)
-    return jsonify({'ok': True, 'point_rate': rate, 'point_redeem_rate': redeem_rate})
+    return jsonify({'ok': True, 'point_rate': rate, 'point_redeem_rate': redeem_rate, 'point_enabled': enabled})
 
 
 # ─── LAPORAN HISTORY POINT PASIEN ────────────────────
@@ -10476,6 +10737,14 @@ def _migr_fv(s):
 def _migr_sv(s):
     return str(s).strip() if s is not None else ''
 
+def _migr_norm_nama(s):
+    """Normalisasi nama produk/jasa utk pencocokan case/whitespace-insensitive.
+    Dipakai krn CSV R_penjualan.csv lawas: kolom 'kd_barang' TERNYATA berisi
+    NAMA (fixed-width, byte penuh spasi trailing), bukan kode (lihat
+    _LEGACY_LAYOUTS). Jadi dicocokkan ke Barang/produk_pelayanan skrg BY NAMA,
+    bukan by kode. Ditemukan 2026-10-28 dari audit data nyata."""
+    return ' '.join((s or '').split()).casefold()
+
 def _migr_satuan_aman(s, default=''):
     """Validasi kolom 'satuan' saat migrasi CSV — HARUS teks satuan (mis. 'gr',
     'pcs', 'ml'), BUKAN angka. Ditemukan 2026-10-01: 15 kd_barang di data lama
@@ -10529,8 +10798,12 @@ _LEGACY_LAYOUTS = {
     },
     'R_penjualan.csv': {
         'ncol': 14,
-        'header': ["no_faktur","petugas_abaikan","tanggal","kd_barang","nm_generik_abaikan",
-                   "qty","harga","disc","sub_total","kd_karyawan","cashier","harga_asli",
+        # Posisi index 1 & 9 dikoreksi 2026-10-29 (sebelumnya TERTUKAR): index 1
+        # (setelah no_faktur) = staf yg mengerjakan tindakan ('0'=barang/tanpa
+        # staf, kode non-'0', bisa koma-jamak utk >1 staf = jasa); index 9 =
+        # referensi pasien per-baris (redundan dgn Penjualan.csv, diabaikan).
+        'header': ["no_faktur","kd_karyawan","tanggal","kd_barang","nm_generik_abaikan",
+                   "qty","harga","disc","sub_total","kd_pasien_baris_abaikan","cashier","harga_asli",
                    "total_harbeli","exp","nm_barang"],
         'dup_col': 3,   # kd_barang (posisi ke-4, index 3) -> disalin jadi kolom virtual nm_barang
     },
@@ -10810,6 +11083,461 @@ def migrasi_eksekusi():
             con.close()
         except Exception:
             pass
+        return jsonify({'ok': False, 'msg': str(e)}), 500
+
+
+# ─── MIGRASI PENJUALAN SUSULAN (data lama yg terputus/terlewat) ──────────────
+# Beda dari /api/migrasi/eksekusi di atas (yg MURNI dump historis, tak sentuh
+# stok/poin/komisi — krn asumsinya stok sudah di-snapshot final lewat
+# migrasi_stok.html terpisah): tool ini untuk transaksi yg BELUM pernah ikut
+# migrasi awal sama sekali (no_faktur belum ada di Penjualan), jadi stok di
+# sistem sekarang BELUM memperhitungkan transaksi itu. Setiap faktur yg BARU
+# (belum ada) diperlakukan spt transaksi POS sungguhan: Penjualan+R_Penjualan
+# diisi, Stok_barang dipotong + RiwayatBarang dicatat (jenis barang), poin
+# pasien ditambah (DetailPoint), komisi karyawan dihitung otomatis dari rate
+# produk_pelayanan sesuai peran karyawan (jenis jasa) lalu masuk Point_karyawan
+# berstatus 'released' langsung (data lama, tak perlu alur pending Kit Perawat).
+# Reuse file/endpoint upload yg sama dgn migrasi.html (SEMENTARA_DIR/Penjualan.csv
+# & R_penjualan.csv) — lihat /api/migrasi/upload & /api/migrasi/status di atas.
+@app.route('/migrasi_penjualantanggal')
+def migrasi_penjualantanggal_page():
+    return send_from_directory('static', 'migrasi_penjualantanggal.html')
+
+
+@app.route('/api/migrasi_penjualantanggal/info')
+def migrasi_penjualantanggal_info():
+    hdrs_p, rows_p, err_p = _load_sementara_csv('Penjualan.csv')
+    if err_p:
+        return jsonify({'ok': False, 'msg': err_p}), 400
+    hdrs_r, rows_r, err_r = _load_sementara_csv('R_penjualan.csv')
+    if err_r:
+        return jsonify({'ok': False, 'msg': err_r}), 400
+
+    faktur_csv = set()
+    for r in rows_p:
+        d = {h.lower(): v for h, v in zip(hdrs_p, r)}
+        no_f = _migr_sv(d.get('no_faktur', ''))
+        if no_f:
+            faktur_csv.add(no_f)
+
+    existing = {row['no_faktur'] for row in query("SELECT no_faktur FROM Penjualan")}
+    baru = faktur_csv - existing
+
+    lokasi_list = rows_to_list(query(
+        "SELECT kd_lokasi, nm_lokasi FROM Lokasi WHERE aktif=1 AND kd_lokasi!='INDUK' AND tipe!='induk' ORDER BY nm_lokasi"))
+
+    return jsonify({
+        'ok': True,
+        'penjualan_row_count': len(rows_p or []),
+        'r_penjualan_row_count': len(rows_r or []),
+        'faktur_total_csv': len(faktur_csv),
+        'faktur_sudah_ada': len(faktur_csv & existing),
+        'faktur_baru': len(baru),
+        'lokasi_options': lokasi_list,
+    })
+
+
+@app.route('/api/migrasi_penjualantanggal/eksekusi', methods=['POST'])
+def migrasi_penjualantanggal_eksekusi():
+    # PENTING: pakai SATU koneksi (get_raw_db) utk seluruh proses, BUKAN
+    # query()/execute() modul (tiap panggilan buka+tutup koneksi MySQL baru).
+    # Dgn 10rb+ faktur x beberapa baris detail, versi query()/execute() = ratusan
+    # ribu round-trip connect/auth MySQL dlm SATU request HTTP -> request jadi
+    # berpuluh menit -> browser/proxy putus duluan ("Failed to fetch").
+    # Ditemukan 2026-10-28 saat uji nyata 13.012 faktur baru.
+    con = None
+    try:
+        body = request.json or {}
+        kd_lokasi = (body.get('kd_lokasi') or '').strip()
+        kasir_default = (body.get('kasir') or '').strip()
+        if not kd_lokasi:
+            return jsonify({'ok': False, 'msg': 'Kode lokasi/cabang wajib dipilih'}), 400
+
+        hdrs_p, rows_p, err_p = _load_sementara_csv('Penjualan.csv')
+        if err_p:
+            return jsonify({'ok': False, 'msg': err_p}), 400
+        hdrs_r, rows_r, err_r = _load_sementara_csv('R_penjualan.csv')
+        if err_r:
+            return jsonify({'ok': False, 'msg': err_r}), 400
+
+        con = get_raw_db(timeout=600)
+        cur = con.cursor()
+        cur.execute("PRAGMA foreign_keys = OFF")
+        cur.execute("PRAGMA journal_mode = WAL")
+        cur.execute("PRAGMA synchronous = NORMAL")
+
+        # Log aktivitas per-item (pasien/barang/karyawan auto-create) ditulis LEWAT
+        # koneksi `cur` yg sama (BUKAN catat_log()/execute() modul -- itu buka
+        # koneksi MySQL baru tiap panggil, sama persis penyebab "Failed to fetch"
+        # yg sudah diperbaiki di loop utama; dipanggil per-item di sini bisa
+        # ratusan/ribuan kali). Log ringkasan tetap 1x di akhir lewat catat_log().
+        _log_user = get_current_user() or {}
+        _log_ip = request.remote_addr or ''
+        def _log_auto(aksi, entitas, ref, keterangan, data_baru=None):
+            cur.execute("""INSERT INTO Aktivitas_Log
+                (waktu,username,nama_user,role,kd_lokasi,aksi,entitas,ref,keterangan,data_lama,data_baru,ip_address)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (str(datetime.now()), _log_user.get('username',''), _log_user.get('nama',''),
+                 _log_user.get('role',''), _log_user.get('kd_lokasi',''), aksi, entitas, str(ref),
+                 keterangan, None, json.dumps(data_baru, default=str) if data_baru is not None else None,
+                 _log_ip))
+
+        existing = {row['no_faktur'] for row in cur.execute("SELECT no_faktur FROM Penjualan").fetchall()}
+
+        penjualan_map = {}
+        for r in rows_p:
+            d = {h.lower(): v for h, v in zip(hdrs_p, r)}
+            no_f = _migr_sv(d.get('no_faktur', ''))
+            if no_f and no_f not in penjualan_map:
+                penjualan_map[no_f] = d
+
+        detail_map = {}
+        for r in rows_r:
+            d = {h.lower(): v for h, v in zip(hdrs_r, r)}
+            no_f = _migr_sv(d.get('no_faktur', ''))
+            kd_b = _migr_sv(d.get('kd_barang', ''))
+            if not no_f or not kd_b:
+                continue
+            detail_map.setdefault(no_f, []).append(d)
+
+        # CSV lawas: kolom "kd_barang" berisi NAMA (bukan kode) -- dicocokkan ke
+        # Barang/produk_pelayanan skrg BY NAMA (trim+casefold). Yang tak ketemu
+        # tetap diinsert ke R_Penjualan apa adanya (nilai transaksi/laporan tetap
+        # akurat), cuma stok tidak ikut terpotong utk baris itu.
+        pelayanan_by_nama = {}
+        pelayanan_rates = {}
+        for row in cur.execute(
+                "SELECT kd_pelayanan, nm_pelayanan, komisi_dokter, komisi_supervisor, komisi_perawat FROM produk_pelayanan").fetchall():
+            pelayanan_by_nama[_migr_norm_nama(row['nm_pelayanan'])] = row['kd_pelayanan']
+            pelayanan_rates[row['kd_pelayanan']] = row
+        barang_by_nama = {}
+        for row in cur.execute("SELECT kd_barang, nm_barang FROM Barang").fetchall():
+            barang_by_nama[_migr_norm_nama(row['nm_barang'])] = row['kd_barang']
+        point_rate = get_point_rate()
+
+        # Master yang belum ada (pasien/barang/jasa/karyawan) di-auto-create minimal
+        # (cuma modal kode dr CSV, krn memang cuma itu datanya) DITANDAI jelas
+        # di nama-nya supaya gampang dicari & dilengkapi manual belakangan.
+        existing_pasien = {row['kd_pasien'] for row in cur.execute("SELECT kd_pasien FROM Pasien").fetchall()}
+        existing_karyawan = {row['kd_karyawan'] for row in cur.execute("SELECT kd_karyawan FROM Karyawan").fetchall()}
+        # Kode staf CSV lawas (mis. "NT") dicocokkan ke Karyawan.nickname skrg
+        # (bukan kd_karyawan) -- yg cocok dipakai hitung komisi otomatis sesuai
+        # rate produk_pelayanan & peran staf itu; yg tak cocok di-auto-create
+        # jadi Karyawan baru (nonaktif, ditandai perlu dilengkapi), TANPA komisi.
+        karyawan_by_nickname = {}
+        for row in cur.execute("SELECT kd_karyawan, nickname, pekerjaan FROM Karyawan WHERE nickname IS NOT NULL AND nickname != ''").fetchall():
+            norm = _migr_norm_nama(row['nickname'])
+            if norm and norm not in karyawan_by_nickname:
+                karyawan_by_nickname[norm] = row
+
+        new_fakturs = [nf for nf in penjualan_map if nf not in existing]
+
+        stat = {
+            'penjualan_count': 0, 'r_penjualan_count': 0, 'r_penjualan_jasa': 0,
+            'r_penjualan_barang': 0, 'faktur_tanpa_detail': 0, 'stok_dipotong': 0,
+            'stok_tidak_ketemu': 0, 'point_ditambah': 0, 'komisi_ditambah': 0,
+            'pasien_dibuat': 0, 'barang_dibuat': 0, 'karyawan_dibuat': 0, 'pelayanan_dibuat': 0,
+        }
+        stok_minus_set = set()
+        barang_tidak_ketemu_set = set()
+
+        for i, no_f in enumerate(new_fakturs):
+            pd_ = penjualan_map[no_f]
+            tanggal = _migr_pd(pd_.get('tanggal', ''))
+            total_harga = _migr_fv(pd_.get('total_harga', 0))
+            hpp = _migr_fv(pd_.get('hpp', 0))
+            kd_pasien = _migr_sv(pd_.get('kd_pasien', ''))
+            metode_bayar = _migr_sv(pd_.get('metode_bayar', '')) or 'Tunai'
+
+            if kd_pasien and kd_pasien not in existing_pasien:
+                cur.execute("""INSERT OR IGNORE INTO Pasien (kd_pasien, nm_pasien, alamat) VALUES (?,?,?)""",
+                    (kd_pasien, f"⚠ Perlu dilengkapi ({kd_pasien})",
+                     "Dibuat otomatis dari migrasi penjualan susulan — lengkapi nama, alamat & kontak asli pasien ini."))
+                existing_pasien.add(kd_pasien)
+                stat['pasien_dibuat'] += 1
+                _log_auto('migrasi_auto_create_pasien', 'Pasien', kd_pasien,
+                           f"Auto-create dari migrasi penjualan susulan (faktur {no_f}) — perlu dilengkapi manual",
+                           {'kd_pasien': kd_pasien})
+
+            cur.execute("""INSERT OR IGNORE INTO Penjualan
+                (no_faktur,tanggal,total_harga,hpp,dokter,kd_pasien,kasir,
+                 metode_bayar,status,disc_trx,disc_trx_nilai,kd_lokasi)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""",
+                (no_f, tanggal, total_harga, hpp, '', kd_pasien, kasir_default,
+                 metode_bayar, 'done', 0, 0, kd_lokasi))
+            stat['penjualan_count'] += 1
+
+            rows_detail = detail_map.get(no_f, [])
+            if not rows_detail:
+                stat['faktur_tanpa_detail'] += 1
+                continue
+
+            for d in rows_detail:
+                kd_b_csv = _migr_sv(d.get('kd_barang', ''))   # sebenarnya NAMA, bukan kode -- lihat catatan di atas
+                qty = _migr_fv(d.get('qty', 0))
+                r_tanggal = _migr_pd(d.get('tanggal', '')) or tanggal
+                exp = _migr_sv(d.get('exp', ''))
+                nama_norm = _migr_norm_nama(kd_b_csv)
+
+                # kd_karyawan (posisi setelah no_faktur, dikoreksi 2026-10-29):
+                # '0'/kosong = barang (tanpa staf); selain itu = jasa, berisi kode
+                # staf yg mengerjakan (koma-jamak kalau >1 orang, mis. "NT,RF").
+                staff_raw = _migr_sv(d.get('kd_karyawan', ''))
+                is_jasa = bool(staff_raw) and staff_raw != '0'
+                staff_codes = [c.strip() for c in staff_raw.split(',') if c.strip() and c.strip() != '0'] if is_jasa else []
+
+                if is_jasa:
+                    jenis = 'jasa'
+                    kd_pelayanan_match = pelayanan_by_nama.get(nama_norm)
+                    if kd_pelayanan_match:
+                        kd_b = kd_pelayanan_match
+                    else:
+                        # Jasa/tindakan yg namanya tak ketemu di master produk_pelayanan skrg
+                        # -- auto-create stub (rate komisi default 0 -> otomatis tak ada
+                        # komisi dihitung utk baris ini sampai dilengkapi manual).
+                        kd_b = kd_b_csv
+                        nm_flag = f"⚠ PERLU DATA ASLI (harga & rate komisi) — {kd_b_csv}"
+                        cur.execute("INSERT OR IGNORE INTO produk_pelayanan (kd_pelayanan, nm_pelayanan, aktif) VALUES (?,?,1)",
+                                    (kd_b, nm_flag))
+                        pelayanan_by_nama[nama_norm] = kd_b
+                        pelayanan_rates[kd_b] = {'komisi_dokter': 0, 'komisi_supervisor': 0, 'komisi_perawat': 0}
+                        stat['pelayanan_dibuat'] += 1
+                        _log_auto('migrasi_auto_create_pelayanan', 'produk_pelayanan', kd_b,
+                                   f"Auto-create dari migrasi penjualan susulan (faktur {no_f}) — perlu dilengkapi manual",
+                                   {'kd_pelayanan': kd_b, 'nm_asli_csv': kd_b_csv})
+
+                    # Tiap kode staf: cocokkan ke Karyawan.nickname skrg. Cocok -> hitung
+                    # komisi penuh sesuai peran & rate produk_pelayanan (tiap staf dapat
+                    # penuh, TIDAK dibagi -- sesuai arahan). Tak cocok -> auto-create
+                    # Karyawan baru (nonaktif, ditandai), TANPA komisi.
+                    for code in staff_codes:
+                        code_norm = _migr_norm_nama(code)
+                        match = karyawan_by_nickname.get(code_norm)
+                        if match:
+                            rates = pelayanan_rates.get(kd_b)
+                            if rates:
+                                role = match['pekerjaan']
+                                if role == 'Dokter':
+                                    komisi = rates['komisi_dokter'] or 0
+                                elif role == 'Supervisor':
+                                    komisi = rates['komisi_supervisor'] or 0
+                                else:
+                                    komisi = rates['komisi_perawat'] or 0
+                                if komisi:
+                                    cur.execute("""INSERT INTO Point_karyawan
+                                        (no_faktur,tanggal,kd_pasien,kd_pelayanan,nm_pelayanan,komisi,kd_karyawan,status)
+                                        VALUES (?,?,?,?,?,?,?,'released')""",
+                                        (no_f, r_tanggal, kd_pasien, kd_b, kd_b_csv, komisi, match['kd_karyawan']))
+                                    stat['komisi_ditambah'] += 1
+                        elif code not in existing_karyawan:
+                            cur.execute("""INSERT OR IGNORE INTO Karyawan (kd_karyawan, nm_karyawan, nickname, pekerjaan, aktif)
+                                VALUES (?,?,?,?,0)""",
+                                (code, f"⚠ Perlu dilengkapi ({code})", code, ''))
+                            existing_karyawan.add(code)
+                            stat['karyawan_dibuat'] += 1
+                            _log_auto('migrasi_auto_create_karyawan', 'Karyawan', code,
+                                       f"Auto-create dari migrasi penjualan susulan (faktur {no_f}), nonaktif — perlu dilengkapi manual",
+                                       {'kd_karyawan': code})
+                else:
+                    jenis = 'barang'
+                    kd_barang_match = barang_by_nama.get(nama_norm)
+                    if kd_barang_match:
+                        kd_b = kd_barang_match
+                    else:
+                        # Nama tak ketemu sama sekali -- auto-create master Barang +
+                        # baris Stok_barang awal (stok 0) di cabang ini, ditandai jelas,
+                        # supaya potongan stok di bawah tetap jalan (kalau jadi minus,
+                        # langsung kelihatan lewat stok_minus -- bukan diam2 dilewati).
+                        kd_b = kd_b_csv
+                        nm_flag = f"⚠ PERLU KODE & DATA ASLI — {kd_b_csv}"
+                        cur.execute("INSERT OR IGNORE INTO Barang (kd_barang, nm_barang, aktif) VALUES (?,?,1)",
+                                    (kd_b, nm_flag))
+                        cur.execute("""INSERT OR IGNORE INTO Stok_barang
+                            (kd_barang, nm_barang, stok_awal, stok_sisa, stok_gudang, satuan, kd_lokasi)
+                            VALUES (?,?,0,0,0,'Pcs',?)""", (kd_b, nm_flag, kd_lokasi))
+                        barang_by_nama[nama_norm] = kd_b
+                        kd_barang_match = kd_b
+                        stat['barang_dibuat'] += 1
+                        _log_auto('migrasi_auto_create_barang', 'Barang', kd_b,
+                                   f"Auto-create dari migrasi penjualan susulan (faktur {no_f}) — perlu dilengkapi manual",
+                                   {'kd_barang': kd_b, 'nm_barang_asli_csv': kd_b_csv})
+
+                cur.execute("""INSERT INTO R_Penjualan
+                    (no_faktur,tanggal,kd_barang,nm_barang,harga,harga_asli,qty,
+                     disc,sub_total,total_harbeli,kd_karyawan,cashier,exp,jenis,racikan_ref)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)""",
+                    (no_f, r_tanggal, kd_b, kd_b_csv,
+                     _migr_fv(d.get('harga', 0)), _migr_fv(d.get('harga_asli', 0)), qty,
+                     _migr_disc_aman(d.get('disc', 0)), _migr_fv(d.get('sub_total', 0)),
+                     _migr_fv(d.get('total_harbeli', 0)), staff_raw,
+                     _migr_sv(d.get('cashier', '')), exp, jenis, ''))
+                stat['r_penjualan_count'] += 1
+                stat['r_penjualan_jasa' if jenis == 'jasa' else 'r_penjualan_barang'] += 1
+
+                if jenis == 'barang' and qty:
+                    if not kd_barang_match:
+                        stat['stok_tidak_ketemu'] += 1
+                        barang_tidak_ketemu_set.add(kd_b_csv)
+                    else:
+                        if exp:
+                            cur.execute("UPDATE Stok_barang SET stok_sisa=stok_sisa-? WHERE kd_barang=? AND exp=? AND kd_lokasi=?",
+                                    (qty, kd_b, exp, kd_lokasi))
+                            stok_now = cur.execute("SELECT stok_sisa, stok_gudang FROM Stok_barang WHERE kd_barang=? AND exp=? AND kd_lokasi=?",
+                                             (kd_b, exp, kd_lokasi)).fetchone()
+                        else:
+                            cur.execute("UPDATE Stok_barang SET stok_sisa=stok_sisa-? WHERE kd_barang=? AND kd_lokasi=?",
+                                    (qty, kd_b, kd_lokasi))
+                            stok_now = cur.execute("SELECT stok_sisa, stok_gudang FROM Stok_barang WHERE kd_barang=? AND kd_lokasi=? ORDER BY id LIMIT 1",
+                                             (kd_b, kd_lokasi)).fetchone()
+                        if stok_now:
+                            cur.execute("""INSERT INTO RiwayatBarang (tanggal,kd_barang,exp,keterangan,nilai,saldo_e,saldo_g)
+                                       VALUES (?,?,?,?,?,?,?)""",
+                                    (r_tanggal, kd_b, exp, f"Migrasi susulan {no_f}", -qty,
+                                     stok_now['stok_sisa'], stok_now['stok_gudang']))
+                            stat['stok_dipotong'] += 1
+                            if stok_now['stok_sisa'] < 0:
+                                stok_minus_set.add(kd_b)
+                        else:
+                            stat['stok_tidak_ketemu'] += 1
+                            barang_tidak_ketemu_set.add(kd_b_csv)
+
+            # Poin member — sekali per faktur (bukan per baris), sesuai formula bayar_penjualan().
+            if kd_pasien and metode_bayar != 'Point Member' and total_harga > 0:
+                pts = int(total_harga / point_rate)
+                if pts > 0:
+                    cur.execute("INSERT INTO DetailPoint (kd_pasien,keterangan,debit,tanggal) VALUES (?,?,?,?)",
+                            (kd_pasien, no_f, pts, tanggal))
+                    stat['point_ditambah'] += 1
+
+            # Commit per-batch (bukan per-faktur, bukan 1x di akhir) — jaga agar
+            # transaksi tak membengkak tak terbatas utk 10rb+ faktur, sekaligus
+            # kalau request terputus di tengah, batch sebelumnya tetap tersimpan
+            # (faktur berikutnya aman di-retry krn INSERT OR IGNORE + `existing` set).
+            if (i + 1) % 200 == 0:
+                con.commit()
+
+        con.commit()
+        cur.execute("PRAGMA foreign_keys = ON")
+        con.commit()
+        con.close()
+        con = None
+
+        catat_log('migrasi_penjualan_susulan', 'Penjualan', '',
+                  f"Migrasi penjualan susulan: {stat['penjualan_count']} faktur baru, "
+                  f"{stat['stok_dipotong']} stok dipotong, {stat['point_ditambah']} poin, "
+                  f"{stat['komisi_ditambah']} komisi (staf cocok nickname), "
+                  f"auto-create: {stat['pasien_dibuat']} pasien, {stat['barang_dibuat']} barang, "
+                  f"{stat['pelayanan_dibuat']} jasa, {stat['karyawan_dibuat']} karyawan "
+                  f"(semua auto-create perlu dilengkapi manual)")
+
+        return jsonify({
+            'ok': True,
+            'faktur_diproses': stat['penjualan_count'],
+            'faktur_dilewati': len(penjualan_map) - stat['penjualan_count'],
+            **stat,
+            'stok_minus': sorted(stok_minus_set),
+            'barang_tidak_ketemu': sorted(barang_tidak_ketemu_set),
+        })
+    except Exception as e:
+        if con is not None:
+            try:
+                con.close()
+            except Exception:
+                pass
+        return jsonify({'ok': False, 'msg': str(e)}), 500
+
+
+@app.route('/api/migrasi_penjualantanggal/rekonsiliasi_komisi', methods=['POST'])
+def migrasi_penjualantanggal_rekonsiliasi_komisi():
+    """Hitung ULANG komisi utk baris jasa hasil migrasi_penjualantanggal yg BELUM
+    dapat komisi saat eksekusi awal -- krn saat itu master produk_pelayanan
+    dan/atau staf-nya masih auto-create (rate 0 / tak ketemu match). Dipanggil
+    admin BERKALI-KALI stlh melengkapi master yg ditandai "⚠" (edit rate komisi
+    di produk_pelayanan, dan/atau lengkapi data di Karyawan). Aman diulang --
+    baris yg sudah py Point_karyawan dilewati, tidak dobel."""
+    con = None
+    try:
+        body = request.json or {}
+        kasir = (body.get('kasir') or '').strip()
+        if not kasir:
+            return jsonify({'ok': False, 'msg': 'Nama kasir (marker batch migrasi) wajib diisi'}), 400
+
+        con = get_raw_db(timeout=300)
+        cur = con.cursor()
+
+        pelayanan_rates = {}
+        for row in cur.execute(
+                "SELECT kd_pelayanan, komisi_dokter, komisi_supervisor, komisi_perawat FROM produk_pelayanan").fetchall():
+            pelayanan_rates[row['kd_pelayanan']] = row
+
+        # Kode staf dicocokkan ke nickname DULU, kalau tak ketemu dicoba ke
+        # kd_karyawan langsung (krn auto-create karyawan dulu pakai kode itu
+        # sbg kd_karyawan DAN nickname sekaligus -- menangkap kasus admin cuma
+        # mengedit nm_karyawan/pekerjaan tanpa mengubah nickname/kd_karyawan).
+        karyawan_by_nickname = {}
+        karyawan_by_kd = {}
+        for row in cur.execute("SELECT kd_karyawan, nickname, pekerjaan FROM Karyawan").fetchall():
+            karyawan_by_kd[row['kd_karyawan']] = row
+            if row['nickname']:
+                norm = _migr_norm_nama(row['nickname'])
+                if norm and norm not in karyawan_by_nickname:
+                    karyawan_by_nickname[norm] = row
+
+        rows = cur.execute("""SELECT rp.no_faktur, rp.tanggal, rp.kd_barang AS kd_pelayanan,
+                rp.nm_barang, rp.kd_karyawan AS staff_raw, p.kd_pasien
+            FROM R_Penjualan rp JOIN Penjualan p ON p.no_faktur = rp.no_faktur
+            WHERE rp.jenis='jasa' AND p.kasir=?""", (kasir,)).fetchall()
+
+        baris_diperiksa = 0
+        komisi_ditambah = 0
+        for r in rows:
+            baris_diperiksa += 1
+            staff_raw = _migr_sv(r['staff_raw'])
+            if not staff_raw or staff_raw == '0':
+                continue
+            rates = pelayanan_rates.get(r['kd_pelayanan'])
+            if not rates:
+                continue
+            codes = [c.strip() for c in staff_raw.split(',') if c.strip() and c.strip() != '0']
+            for code in codes:
+                match = karyawan_by_nickname.get(_migr_norm_nama(code)) or karyawan_by_kd.get(code)
+                if not match:
+                    continue
+                role = match['pekerjaan']
+                if role == 'Dokter':
+                    komisi = rates['komisi_dokter'] or 0
+                elif role == 'Supervisor':
+                    komisi = rates['komisi_supervisor'] or 0
+                else:
+                    komisi = rates['komisi_perawat'] or 0
+                if not komisi:
+                    continue
+                sudah = cur.execute("""SELECT 1 FROM Point_karyawan
+                    WHERE no_faktur=? AND kd_pelayanan=? AND kd_karyawan=? LIMIT 1""",
+                    (r['no_faktur'], r['kd_pelayanan'], match['kd_karyawan'])).fetchone()
+                if sudah:
+                    continue
+                cur.execute("""INSERT INTO Point_karyawan
+                    (no_faktur,tanggal,kd_pasien,kd_pelayanan,nm_pelayanan,komisi,kd_karyawan,status)
+                    VALUES (?,?,?,?,?,?,?,'released')""",
+                    (r['no_faktur'], r['tanggal'], r['kd_pasien'], r['kd_pelayanan'], r['nm_barang'], komisi, match['kd_karyawan']))
+                komisi_ditambah += 1
+
+        con.commit()
+        con.close()
+        con = None
+
+        catat_log('migrasi_rekonsiliasi_komisi', 'Point_karyawan', '',
+                  f"Rekonsiliasi komisi migrasi susulan (kasir={kasir}): {komisi_ditambah} komisi baru "
+                  f"ditambahkan dari {baris_diperiksa} baris jasa diperiksa")
+
+        return jsonify({'ok': True, 'baris_diperiksa': baris_diperiksa, 'komisi_ditambah': komisi_ditambah})
+    except Exception as e:
+        if con is not None:
+            try:
+                con.close()
+            except Exception:
+                pass
         return jsonify({'ok': False, 'msg': str(e)}), 500
 
 

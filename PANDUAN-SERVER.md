@@ -42,6 +42,15 @@ lalu diakses oleh komputer kasir lain lewat jaringan (LAN/WiFi).
 
 ## C. Langkah Instalasi (di komputer SERVER)
 
+> **Cara tercepat:** kalau Anda sudah punya paket **AppClinic-Server.zip**
+> (dibuat lewat `BUAT-PAKET-INSTALL.ps1` dari komputer developer), cukup
+> ekstrak lalu klik kanan **INSTALL.bat → Run as administrator**. Langkah
+> 1–3 di bawah ini (Python, dan pembuatan database+user MySQL di langkah 3)
+> sudah otomatis dikerjakan oleh `INSTALL.bat` — langsung lanjut ke bagian
+> **C.4** setelahnya. Bagian di bawah ini untuk jalur **manual** (salin
+> folder apa adanya, tanpa `INSTALL.bat`) atau sebagai referensi kalau
+> `INSTALL.bat` gagal di suatu langkah.
+
 ### 1. Pasang Python
 - Unduh dari https://www.python.org/downloads
 - Saat instalasi **WAJIB centang "Add Python to PATH"**.

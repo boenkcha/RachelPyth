@@ -121,15 +121,22 @@ nav{flex:1;padding:10px 10px;overflow-y:auto;}
 .nav-item.active{background:var(--gold-dim);color:var(--gold);font-weight:600;box-shadow:0 2px 8px rgba(176,138,68,0.12);}
 .nav-item .ni{font-size:15px;width:20px;text-align:center;}
 .sidebar-bottom{padding:10px 10px;border-top:1px solid var(--border);background:var(--bg3);}
-/* POS active indicator */
+/* POS active indicator — titik hijau yg "berdenyut" ini SENGAJA jalan terus-menerus
+   (infinite) selama sesi POS aktif, jadi animasinya WAJIB murah/GPU-only (transform +
+   opacity lewat ::after), BUKAN animasi box-shadow. box-shadow mahal di-repaint (bukan
+   cuma compositing spt transform), dan kalau dijalankan infinite selamanya di area
+   menu, itu bikin keseluruhan tampilan terasa berat/berkedip — bukan cuma dot-nya. */
 .pos-active-dot{
   margin-left:auto;width:8px;height:8px;border-radius:50%;
-  background:var(--success);box-shadow:0 0 0 0 rgba(92,184,123,.6);
-  animation:pos-ping 1.6s ease-in-out infinite;flex-shrink:0;
+  background:var(--success);position:relative;flex-shrink:0;
+}
+.pos-active-dot::after{
+  content:'';position:absolute;inset:0;border-radius:50%;
+  background:var(--success);animation:pos-ping 1.6s ease-in-out infinite;
 }
 @keyframes pos-ping{
-  0%,100%{box-shadow:0 0 0 0 rgba(92,184,123,.6);}
-  50%{box-shadow:0 0 0 5px rgba(92,184,123,0);}
+  0%{transform:scale(1);opacity:.6;}
+  100%{transform:scale(2.2);opacity:0;}
 }
 #main{flex:1;overflow-y:auto;display:flex;flex-direction:column;}
 .topbar{
@@ -598,6 +605,19 @@ td.strong{color:var(--text);font-weight:600;}
 .pb-items-table tbody tr{transition:.12s;}
 .pb-items-table tbody tr:hover td{background:var(--gold-dim);}
 
+/* ── Pembelian Cabang — konfirmasi "item masuk, faktur masih terbuka" ── */
+.pbc-add-flash{
+  display:flex;align-items:center;gap:6px;
+  background:rgba(22,163,74,.1);border:1px solid rgba(22,163,74,.35);
+  color:#15803d;font-size:12.5px;font-weight:600;line-height:1.5;
+  padding:10px 14px;border-radius:10px;margin-bottom:12px;
+}
+.pbc-row-flash{animation:pbcRowFlash 1.8s ease-out;}
+@keyframes pbcRowFlash{
+  0%{background:rgba(22,163,74,.22);}
+  100%{background:transparent;}
+}
+
 /* ── Add item — new design ── */
 .pb-add-panel{
   margin-top:16px;
@@ -616,7 +636,7 @@ td.strong{color:var(--text);font-weight:600;}
   padding:0 16px;font-size:20px;color:var(--text3);flex-shrink:0;
 }
 .pb-add-search input{
-  flex:1;padding:16px 0;font-size:15px;border:none;outline:none;
+  width:100%;box-sizing:border-box;padding:16px 0;font-size:15px;border:none;outline:none;
   background:transparent;color:var(--text);
   font-family:inherit;
 }
@@ -1367,6 +1387,13 @@ td.strong{color:var(--text);font-weight:600;}
 .disc-badge:hover{background:var(--gold-dim);color:var(--gold);}
 .disc-badge.has-disc{background:var(--rose-dim);color:var(--rose);}
 
+/* ─── HARGA EDITABLE (POS) ───────────────────── */
+.ci-harga-edit{
+  cursor:pointer;font-size:11px;color:var(--text3);border-bottom:1px dashed var(--border2);
+  transition:.15s;
+}
+.ci-harga-edit:hover{color:var(--gold);border-bottom-color:var(--gold);}
+
 /* ─── METODE BAYAR ───────────────────────── */
 .metode-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px;}
 .metode-btn{
@@ -1434,7 +1461,7 @@ textarea:focus{border-color:var(--gold);background:var(--bg4);}
 <!-- ─── LOGIN ─────────────────────────────────────────── -->
 <div id="login-screen">
   <div class="login-card">
-    <div class="login-logo">APPCLINIC</div>
+    <div class="login-logo" id="login-logo">APPCLINIC</div>
     <div class="login-sub">Clinic Management System</div>
     <input type="text" id="l-user" placeholder="Username" value="" autocomplete="username">
     <input type="password" id="l-pass" placeholder="Password" value="" autocomplete="current-password">
@@ -1449,7 +1476,7 @@ textarea:focus{border-color:var(--gold);background:var(--bg4);}
   <!-- Sidebar -->
   <div id="sidebar">
     <div class="sidebar-brand">
-      <div class="brand-name">AppClinic</div>
+      <div class="brand-name" id="brand-name">AppClinic</div>
       <div class="brand-tag">Clinic &amp; Laser</div>
     </div>
     <div class="sidebar-user">
@@ -1484,6 +1511,7 @@ textarea:focus{border-color:var(--gold);background:var(--bg4);}
       <div class="nav-section" data-nav="cabang">Master Data Cabang</div>
       <div class="nav-item" data-nav="cabang" onclick="goto('pasien')"><span class="ni">👤</span>Pasien</div>
       <div class="nav-item" data-nav="cabang" onclick="goto('stok')"><span class="ni">📦</span>Stok Barang Cabang</div>
+      <div class="nav-item" data-nav="cabang" onclick="goto('pembelian-cabang')"><span class="ni">🛒</span>Pembelian Cabang</div>
       <div class="nav-item" data-nav="cabang" onclick="goto('terima-kiriman')"><span class="ni">📥</span>Terima Kiriman Stok</div>
       <div class="nav-item" data-nav="cabang" onclick="goto('transaksi-terlewat')"><span class="ni">⏳</span>Transaksi Belum Selesai</div>
       <div class="nav-item" onclick="goto('order-transfer')"><span class="ni">🔄</span>Order Transfer</div>
@@ -1585,10 +1613,13 @@ textarea:focus{border-color:var(--gold);background:var(--bg4);}
         <button class="metode-btn" onclick="pilihMetode('Debit',this)">
           <span class="mb-icon">💳</span>Debit / Gesek
         </button>
+        <button class="metode-btn" onclick="pilihMetode('QRIS',this)">
+          <span class="mb-icon">📱</span>QRIS
+        </button>
         <button class="metode-btn" onclick="pilihMetode('Internal',this)" title="Transaksi gratis (internal/testing) — nilai barang tetap tercatat di struk, tapi dikecualikan dari omzet">
           <span class="mb-icon">🎁</span>Internal / Gratis
         </button>
-        <button class="metode-btn" onclick="pilihMetode('Point Member',this)" title="Bayar penuh 1 faktur pakai saldo point pasien — tidak bisa digabung split, dan transaksi ini tidak menghasilkan point baru">
+        <button class="metode-btn" id="metode-btn-point" onclick="pilihMetode('Point Member',this)" title="Bayar penuh 1 faktur pakai saldo point pasien — tidak bisa digabung split, dan transaksi ini tidak menghasilkan point baru">
           <span class="mb-icon">⭐</span>Point Member
         </button>
       </div>
@@ -1692,6 +1723,28 @@ textarea:focus{border-color:var(--gold);background:var(--bg4);}
     <div class="modal-footer">
       <button class="btn btn-ghost" onclick="closeModal('modal-disc-item')">Batal</button>
       <button class="btn btn-primary" onclick="konfirmDisc()">Terapkan →</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Edit Harga Jual Item (POS) -->
+<div class="modal-bg" id="modal-harga-item">
+  <div class="modal" style="width:340px;">
+    <div class="modal-title">Harga Jual Item</div>
+    <div style="font-size:13px;color:var(--text2);margin-bottom:16px;font-weight:500;" id="harga-item-nama"></div>
+    <div class="form-row">
+      <label>Harga Satuan</label>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span style="font-size:18px;color:var(--text3);font-weight:600;">Rp</span>
+        <input id="harga-item-input" type="text" inputmode="numeric"
+          placeholder="0" style="flex:1;font-size:18px;font-family:'DM Mono',monospace;"
+          oninput="this.value=formatRibuan(this.value)" onkeydown="if(event.key==='Enter')konfirmHarga();">
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--text3);margin-top:-6px;">Mengubah harga jual khusus untuk item ini di transaksi ini saja — master harga tidak berubah.</div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" onclick="closeModal('modal-harga-item')">Batal</button>
+      <button class="btn btn-primary" onclick="konfirmHarga()">Terapkan →</button>
     </div>
   </div>
 </div>
@@ -2027,6 +2080,7 @@ let posState = { faktur:'', fakturDate:'', pasien:null, rekamMedik:null, items:[
 let beliState = { faktur:'', suplier:null };
 let _pointRateGlobal = 50000;   // Rp per 1 point — dimuat dari /api/pengaturan saat login
 let _pointRedeemRateGlobal = 50000;   // Rp per 1 point SAAT DITUKAR bayar — kurs terpisah
+let _pointEnabledGlobal = true;   // saklar on/off fitur point member — dimuat dari /api/pengaturan
 let klinikInfo = {              // identitas untuk cetak faktur — dimuat dari /api/pengaturan
   nama:'AppClinic', sub:'Klinik Spesialis Kulit & Laser',
   alamat:'', telp:'', kota:'', logo:'/static/logo.png',
@@ -2098,6 +2152,13 @@ function todayLocal() { return localDate(); }
 function localDatePlus(days) { return localDate(new Date(Date.now() + days*86400000)); }
 const fmt = n => 'Rp ' + (Math.round(n)||0).toLocaleString('id-ID');
 const fmtNum = n => (Math.round(n)||0).toLocaleString('id-ID');
+// Pemisah ribuan LIVE saat mengetik harga manual (mis. input "Harga Satuan" pembelian) —
+// titik tiap 3 digit spy "9900000" tidak kebaca "990000"/"99000". Hanya utk kolom rupiah
+// bulat (tanpa desimal). WAJIB pasangan dgn parseRibuan() saat membaca nilainya balik ke
+// angka — JANGAN `+el.value` langsung, krn titik pemisah di situ akan kepotong oleh parser
+// angka JS (mis. Number("99.000") == 99, bukan 99000) dan nilai yg tersimpan jadi salah.
+const formatRibuan = v => { const d = String(v==null?'':v).replace(/\D/g,''); return d ? d.replace(/\B(?=(\d{3})+(?!\d))/g,'.') : ''; };
+const parseRibuan  = v => +String(v==null?'':v).replace(/\D/g,'') || 0;
 // Angka apa adanya termasuk desimal (buang nol di belakang), mis. 0.228 → "0,228", 1 → "1"
 const fmtQty = n => { const x = parseFloat(n); return isFinite(x) ? x.toLocaleString('id-ID',{maximumFractionDigits:4}) : '0'; };
 // Stok dgn desimal maksimal 2 digit (0,23 / 1,5 / 18.459,72), integer tanpa desimal
@@ -2116,17 +2177,21 @@ function isExpired(exp) {
 // fmtDt: format datetime string (ISO 'YYYY-MM-DD'[ HH:MM:SS]) → TAMPILAN SAJA, data
 // tersimpan/dikirim ke server tidak disentuh — "09 Jun 26" | dgn jam "09 Jun 26, 14:35"
 const _bulan = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agt','Sep','Okt','Nov','Des'];
+// Format tampilan tanggal diseragamkan "MMM DD YY" (mis. "Nov 02 26") di SELURUH
+// aplikasi lewat 2 helper terpusat ini — JANGAN disentuh di input tanggal
+// (<input type="date">), itu format kalender bawaan browser/OS, bukan diatur kode
+// web, dan sengaja tidak diubah di sini supaya tidak bentrok dgn parsing-nya.
 function fmtDt(s, opts={}) {
   if (!s) return '—';
   const [datePart, timePart] = String(s).split(' ');
   const [y, m, d] = datePart.split('-');
   if (!y || !m || !d) return s;
-  const tgl = `${d} ${_bulan[+m-1]} ${String(y).slice(-2)}`;
+  const tgl = `${_bulan[+m-1]} ${String(d).padStart(2,'0')} ${String(y).slice(-2)}`;
   if (opts.dateOnly || !timePart) return tgl;
   return `${tgl}, ${timePart.slice(0,5)}`;
 }
 // fmtExp: format tanggal format 'M/D/YYYY'[ H:MM:SS] (konvensi SELURUH Stok_barang.exp
-// & field tanggal mirip lainnya spt tgl_faktur Terima Kiriman) → "DD MMM YY", TAMPILAN
+// & field tanggal mirip lainnya spt tgl_faktur Terima Kiriman) → "MMM DD YY", TAMPILAN
 // SAJA — JANGAN dipakai utk sort/FEFO/perbandingan (itu tetap pakai _exp_key/string asli
 // di tempat lain), murni kosmetik biar tidak rancu dibaca (user 2026-10-10).
 function fmtExp(s) {
@@ -2136,7 +2201,7 @@ function fmtExp(s) {
   if (p.length !== 3) return s;   // format tak dikenal (mis. sudah ISO) — tampilkan apa adanya
   const [m, d, y] = p.map(Number);
   if (!m || !d || !y) return s;
-  return `${String(d).padStart(2,'0')} ${_bulan[m-1]||''} ${String(y).slice(-2)}`;
+  return `${_bulan[m-1]||''} ${String(d).padStart(2,'0')} ${String(y).slice(-2)}`;
 }
 
 function notif(msg, type='success') {
@@ -2289,6 +2354,7 @@ async function doLogin() {
       if (!s) return;
       if (s.point_rate) _pointRateGlobal = parseFloat(s.point_rate) || 50000;
       if (s.point_redeem_rate) _pointRedeemRateGlobal = parseFloat(s.point_redeem_rate) || 50000;
+      _pointEnabledGlobal = s.point_enabled !== false;
       klinikInfo = {
         nama:   s.klinik_nama   || 'AppClinic',
         sub:    s.klinik_sub    || '',
@@ -2358,6 +2424,7 @@ function goto(page) {
     'terima-kiriman': ['Terima Kiriman Stok','Import file kiriman stok (_P/_R) dari induk gedung lain ke stok cabang'],
     'transaksi-terlewat': ['Transaksi Belum Selesai','Faktur berstatus open (belum dibayar) yang ditinggal — lanjutkan atau batalkan (stok dikembalikan)'],
     pembelian: ['Pembelian dari Vendor','Input pembelian supplier — masuk ke stok induk'],
+    'pembelian-cabang': ['Pembelian Cabang','Input pembelian supplier — langsung masuk ke stok cabang, tanpa approval'],
     'rekam-medik':   ['Rekam Medik Pasien','Riwayat kunjungan & rekam medik per pasien'],
     'resep-list':    ['Resep Digital','Lihat, cari & cetak resep digital pasien'],
     'antrian-racikan': ['Antrian Racikan','Daftar racikan yang perlu disiapkan apoteker, dari resep digital pasien'],
@@ -2847,11 +2914,20 @@ async function loadBarang(q='') {
   renderBarang();
 }
 
+// BUG LAMA: fungsi ini sempat nganggap exp berformat ISO 'YYYY-MM-DD' (split('-')),
+// padahal konvensi exp di SELURUH app ini (Stok_barang.exp, lihat _ki_tgl()/_exp_key()
+// di app.py) adalah 'M/D/YYYY'[ H:MM:SS] — tanpa '-' sama sekali, jadi split('-') tidak
+// pernah kepotong & keluar teks mentah berantakan spt "?'5/2025 0:00:00" di badge cart.
+// Diseragamkan ke parser yg sama dgn fmtExp() di bawah, cuma versi ringkas (MMM'YY).
 function fmtExpShort(exp) {
   if(!exp) return '—';
-  const [y,m] = exp.split('-');
+  const datePart = String(exp).trim().split(' ')[0];
+  const p = datePart.split('/');
+  if (p.length !== 3) return '—';
+  const m = +p[0], y = +p[2];
   const mn=['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Ags','Sep','Okt','Nov','Des'];
-  return (mn[+m-1]||'?') + "'" + (y||'??').slice(2);
+  if (!m || !y) return '—';
+  return (mn[m-1]||'?') + "'" + String(y).slice(-2);
 }
 
 function renderBarang() {
@@ -2893,6 +2969,16 @@ function filterBarang(type, el) {
 }
 
 function searchBarang(q) { loadBarang(q); }
+
+// Setelah barang/jasa berhasil masuk keranjang dari hasil pencarian, kosongkan &
+// reset kotak pencarian supaya kasir bisa langsung ketik barang berikutnya tanpa
+// hapus teks pencarian sebelumnya dulu.
+function posResetSearchAfterAdd() {
+  const el = $('pos-search');
+  if (!el) return;
+  if (el.value) { el.value = ''; loadBarang(''); }
+  el.focus();
+}
 
 // ── Guard anti klik-dobel ────────────────────────────────────────────────
 // Proses simpan/bayar butuh waktu network (bisa 1-3 detik) — kasir yg tidak sabar
@@ -2950,6 +3036,7 @@ async function _addToCartImpl(b) {
     posState.items.push({...b, qty: 1, dbId: res.id});
     renderCart();
   }
+  posResetSearchAfterAdd();
 }
 
 async function setQty(idx, newQty) {
@@ -3061,7 +3148,7 @@ function renderCart() {
                <button class="qty-btn" onclick="changeQty(${idx},+1)">+</button>`}
         </div>
         ${item.jenis==='barang'&&item.exp?`<span class="ci-exp-badge">${fmtExpShort(item.exp)}</span>`:''}
-        <span style="font-size:11px;color:var(--text3);">${fmt(item.harga)}</span>
+        <span class="ci-harga-edit" onclick="editHargaItem(${idx})" title="Klik untuk ubah harga jual item ini">${fmt(item.harga)} ✎</span>
         <span class="disc-badge${item.disc&&item.disc!='0'?' has-disc':''}" onclick="editDiscItem(${idx})">${item.disc&&item.disc!='0'?item.disc+'% OFF':'+ Disc'}</span>
         <span class="ci-sub">${fmt(subTotal)}</span>
       </div>
@@ -3235,7 +3322,7 @@ async function pilihMetode(metode, el) {
   _metodeSelected = metode;
   document.querySelectorAll('.metode-btn').forEach(b => b.classList.remove('active'));
   el.classList.add('active');
-  const noBank = (metode === 'Tunai' || metode === 'Internal' || metode === 'Point Member');
+  const noBank = (metode === 'Tunai' || metode === 'Internal' || metode === 'Point Member' || metode === 'QRIS');
   $('bayar-bank').style.display = noBank ? 'none' : 'block';
   if(noBank) $('bayar-bank').value = '';
   // Internal/Gratis & Point Member TIDAK boleh digabung split — Internal krn gratis
@@ -3339,7 +3426,7 @@ function updateBayarPointCek() {
 }
 
 function getMetodeBayar() {
-  if(_metodeSelected === 'Tunai' || _metodeSelected === 'Internal' || _metodeSelected === 'Point Member') return _metodeSelected;
+  if(_metodeSelected === 'Tunai' || _metodeSelected === 'Internal' || _metodeSelected === 'Point Member' || _metodeSelected === 'QRIS') return _metodeSelected;
   const bank = $('bayar-bank').value;
   return bank ? `${_metodeSelected} - ${bank}` : _metodeSelected;
 }
@@ -3350,7 +3437,7 @@ function toggleSplitBayar() {
   const on = $('bayar-split-toggle').checked;
   $('bayar-split-wrap').style.display = on ? 'block' : 'none';
   document.querySelector('#modal-bayar .metode-grid').style.display = on ? 'none' : 'grid';
-  $('bayar-bank').style.display = (!on && _metodeSelected !== 'Tunai' && _metodeSelected !== 'Internal' && _metodeSelected !== 'Point Member') ? 'block' : 'none';
+  $('bayar-bank').style.display = (!on && _metodeSelected !== 'Tunai' && _metodeSelected !== 'Internal' && _metodeSelected !== 'Point Member' && _metodeSelected !== 'QRIS') ? 'block' : 'none';
   if(on) {
     splitRows = [{metode:'Tunai', bank:'', nominal: 0}, {metode:'Transfer', bank:'', nominal: 0}];
     renderSplitRows();
@@ -3386,7 +3473,7 @@ function splitRowUbah(i, field, val, el) {
   }
   splitRows[i][field] = val;
   if(field === 'metode') {
-    if(val === 'Tunai') splitRows[i].bank = '';
+    if(val === 'Tunai' || val === 'QRIS') splitRows[i].bank = '';
     renderSplitRows();   // ganti metode bisa munculkan/sembunyikan dropdown bank — wajib render ulang
   } else {
     // 'bank': JANGAN render ulang (innerHTML rebuild bikin <input> nominal yg sedang
@@ -3397,12 +3484,13 @@ function splitRowUbah(i, field, val, el) {
 function renderSplitRows() {
   const BANKS = ['BCA','Mandiri','BNI','BRI','Lippo'];
   $('bayar-split-rows').innerHTML = splitRows.map((r, i) => {
-    const noBank = (r.metode === 'Tunai');
+    const noBank = (r.metode === 'Tunai' || r.metode === 'QRIS');
     return `<div style="display:flex;gap:6px;margin-bottom:6px;align-items:center;">
       <select style="flex:1.1;" onchange="splitRowUbah(${i},'metode',this.value)">
         <option value="Tunai" ${r.metode==='Tunai'?'selected':''}>💵 Tunai</option>
         <option value="Transfer" ${r.metode==='Transfer'?'selected':''}>🏦 Transfer</option>
         <option value="Debit" ${r.metode==='Debit'?'selected':''}>💳 Debit</option>
+        <option value="QRIS" ${r.metode==='QRIS'?'selected':''}>📱 QRIS</option>
       </select>
       ${noBank ? '' : `<select style="flex:1;" onchange="splitRowUbah(${i},'bank',this.value)">
         <option value="">— Bank —</option>
@@ -3433,7 +3521,7 @@ function getPembayaran() {
     return splitRows.filter(r => (r.nominal || 0) > 0)
       .map(r => ({metode: r.metode, bank: r.bank || '', nominal: r.nominal}));
   }
-  const bank = (_metodeSelected !== 'Tunai' && _metodeSelected !== 'Internal') ? $('bayar-bank').value : '';
+  const bank = (_metodeSelected !== 'Tunai' && _metodeSelected !== 'Internal' && _metodeSelected !== 'QRIS') ? $('bayar-bank').value : '';
   return [{metode: _metodeSelected, bank, nominal: _bayarTotalAkhir || 0}];
 }
 
@@ -3463,6 +3551,10 @@ async function openBayar() {
   $('bayar-split-toggle-wrap').style.display = 'flex';
   $('bayar-split-wrap').style.display = 'none';
   document.querySelector('#modal-bayar .metode-grid').style.display = 'grid';
+  // Sembunyikan tombol Point Member kalau fiturnya sedang dinonaktifkan lewat
+  // Pengaturan — jangan sampai kasir bisa pilih metode yg sudah di-OFF-kan admin.
+  const btnPoint = $('metode-btn-point');
+  if (btnPoint) btnPoint.style.display = _pointEnabledGlobal ? '' : 'none';
   splitRows = [];
   $('btn-proses-bayar').disabled = false;
   if(posState.discTrx > 0) {
@@ -3730,36 +3822,36 @@ function cetakFaktur(D) {
   @page { size: A4 portrait; margin: 12mm 0; }
   html,body{width:100%;}
   *{margin:0;padding:0;box-sizing:border-box;}
-  body{font-family:'Segoe UI',Arial,sans-serif;color:#1a1a1a;font-size:11.5px;line-height:1.35;-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:0 6mm;}
+  body{font-family:${getFakturFontStack()};color:#1a1a1a;font-size:13.5px;line-height:1.35;-webkit-print-color-adjust:exact;print-color-adjust:exact;padding:0 6mm;}
   .head{display:flex;justify-content:space-between;gap:16px;padding-bottom:6px;border-bottom:2px solid #16a34a;}
   .head-left{display:flex;gap:10px;align-items:flex-start;}
   .logo{height:46px;width:auto;object-fit:contain;}
-  .klinik-nama{font-size:18px;font-weight:800;color:#16a34a;letter-spacing:.3px;line-height:1;}
-  .klinik-sub{font-size:11px;color:#b91c1c;font-weight:600;margin-top:2px;}
-  .klinik-meta{font-size:10.5px;color:#444;margin-top:3px;}
-  .head-right{text-align:left;min-width:42%;font-size:11px;}
+  .klinik-nama{font-size:20px;font-weight:800;color:#16a34a;letter-spacing:.3px;line-height:1;}
+  .klinik-sub{font-size:13px;color:#b91c1c;font-weight:600;margin-top:2px;}
+  .klinik-meta{font-size:12.5px;color:#444;margin-top:3px;}
+  .head-right{text-align:left;min-width:42%;font-size:13px;}
   .head-right .kota{color:#444;margin-bottom:3px;}
-  .yth-label{font-size:10px;color:#777;text-transform:uppercase;letter-spacing:.5px;}
-  .yth-nama{font-weight:700;font-size:13px;text-transform:uppercase;}
+  .yth-label{font-size:12px;color:#777;text-transform:uppercase;letter-spacing:.5px;}
+  .yth-nama{font-weight:700;font-size:15px;text-transform:uppercase;}
   .yth-meta{color:#444;}
-  .info{display:flex;gap:24px;margin:7px 0 5px;font-size:11px;}
+  .info{display:flex;gap:24px;margin:7px 0 5px;font-size:13px;}
   .info b{display:inline-block;min-width:118px;color:#555;font-weight:600;}
   table.items{width:100%;border-collapse:collapse;margin-top:2px;}
   table.items th{background:#f0fdf4;border-bottom:1.5px solid #16a34a;padding:5px 7px;text-align:left;
-    font-size:10px;text-transform:uppercase;letter-spacing:.3px;color:#15803d;}
+    font-size:12px;text-transform:uppercase;letter-spacing:.3px;color:#15803d;}
   table.items td{padding:4px 7px;border-bottom:1px dashed #d4d4d4;vertical-align:top;}
   table.items td.c,table.items th.c{text-align:center;}
   table.items td.r,table.items th.r{text-align:right;font-variant-numeric:tabular-nums;}
   .bottom{display:flex;justify-content:space-between;gap:20px;margin-top:10px;}
-  .note{font-style:italic;color:#b91c1c;font-size:10.5px;max-width:58%;}
+  .note{font-style:italic;color:#b91c1c;font-size:12.5px;max-width:58%;}
   .ttd-wrap{display:flex;gap:34px;margin-top:18px;}
-  .ttd{text-align:center;font-size:10.5px;color:#555;}
+  .ttd{text-align:center;font-size:12.5px;color:#555;}
   .ttd .line{margin-top:34px;border-top:1px solid #999;padding-top:2px;min-width:90px;}
-  .totals{min-width:38%;font-size:11.5px;}
+  .totals{min-width:38%;font-size:13.5px;}
   .totals .row{display:flex;justify-content:space-between;padding:2px 0;}
-  .totals .grand{border-top:1.5px solid #16a34a;margin-top:3px;padding-top:4px;font-weight:800;font-size:14px;color:#16a34a;}
-  .totals .point{margin-top:4px;font-style:italic;color:#b45309;font-size:11px;display:flex;justify-content:space-between;}
-  .foot{text-align:center;font-size:9px;color:#999;margin-top:8px;border-top:1px solid #eee;padding-top:4px;}
+  .totals .grand{border-top:1.5px solid #16a34a;margin-top:3px;padding-top:4px;font-weight:800;font-size:16px;color:#16a34a;}
+  .totals .point{margin-top:4px;font-style:italic;color:#b45309;font-size:13px;display:flex;justify-content:space-between;}
+  .foot{text-align:center;font-size:11px;color:#999;margin-top:8px;border-top:1px solid #eee;padding-top:4px;}
 </style></head><body>
   <div class="head">
     <div class="head-left">
@@ -3807,7 +3899,7 @@ function cetakFaktur(D) {
     <div>
       <div class="note">Barang-barang yang sudah dibeli tidak dapat dikembalikan.</div>
       <div class="ttd-wrap">
-        <div class="ttd">Penerima<div class="line">(&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)</div></div>
+        <div class="ttd">Penerima<div class="line">${p.nm_pasien || ''}</div></div>
         <div class="ttd">Hormat Kami<div class="line">${D.kasir || '(&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)'}</div></div>
       </div>
     </div>
@@ -3818,7 +3910,7 @@ function cetakFaktur(D) {
         ? D.pembayaran.map(bp => `<div class="row"><span>${bp.bank ? `${bp.metode} - ${bp.bank}` : bp.metode}</span><span>${nf(bp.nominal)}</span></div>`).join('')
         : `<div class="row"><span>Metode</span><span>${D.metode || 'Tunai'}</span></div>`}
       <div class="row grand"><span>TOTAL</span><span>Rp ${nf(totalAkhir)}</span></div>
-      <div class="point"><span>Anda mendapatkan point</span><span>${point}</span></div>
+      ${_pointEnabledGlobal ? `<div class="point"><span>Anda mendapatkan point</span><span>${point}</span></div>` : ''}
     </div>
   </div>
 
@@ -3842,6 +3934,35 @@ function cetakFaktur(D) {
 //                     cuma andalkan font monospace dasar, tapi tampilan lebih sederhana.
 function getPrintMode() {
   return localStorage.getItem('ac_print_mode') || 'a5';
+}
+
+// ── FONT CETAK FAKTUR (per komputer) — cuma berlaku utk mode 'a5' & 'dotmatrix'
+// (keduanya dirender via HTML/CSS biasa, font apa pun aman dipakai). Mode
+// 'dotmatrix-teks' SENGAJA tidak dengarkan setelan ini — itu <pre> rata-kolom pakai
+// spasi, WAJIB monospace terus apa pun pilihan user, kalau tidak kolomnya berantakan.
+const _FAKTUR_FONT_STACKS = {
+  sans:     "'Segoe UI',Arial,Helvetica,sans-serif",
+  serif:    "'Times New Roman',Times,serif",
+  mono:     "'Courier New',Courier,monospace",
+  consolas: "Consolas,'Courier New',monospace",
+};
+function getFakturFont() {
+  const v = localStorage.getItem('ac_faktur_font');
+  return _FAKTUR_FONT_STACKS[v] ? v : 'sans';
+}
+function getFakturFontStack() {
+  return _FAKTUR_FONT_STACKS[getFakturFont()];
+}
+function simpanFakturFont() {
+  const v = $('set-fakturfont')?.value || 'sans';
+  localStorage.setItem('ac_faktur_font', v);
+  updateFakturFontPreview();
+  notif('✓ Font cetak faktur disimpan untuk komputer ini');
+}
+function updateFakturFontPreview() {
+  const el = $('faktur-font-preview'); if (!el) return;
+  el.style.fontFamily = getFakturFontStack();
+  el.innerHTML = 'Contoh: <b>Klinik AppClinic</b> &nbsp;·&nbsp; Cream A1 2× Rp 50.000 = Rp 100.000';
 }
 
 // ── CETAK FAKTUR DOT-MATRIX — VERSI TEKS POLOS (LQ310, Windows/Chrome lawas) ──
@@ -3918,13 +4039,13 @@ function cetakFakturDotMatrixTeks(D) {
     out.push(totalsRow('Metode', D.metode || 'Tunai'));
   }
   out.push(totalsRow('TOTAL', 'Rp ' + nf(totalAkhir)));
-  out.push(totalsRow('Point diperoleh', String(point)));
+  if (_pointEnabledGlobal) out.push(totalsRow('Point diperoleh', String(point)));
   out.push('');
   out.push('Barang-barang yang sudah dibeli tidak dapat dikembalikan.');
   out.push('');
   out.push('');
   out.push(L('Penerima', 40) + 'Hormat Kami');
-  out.push(L('(                    )', 40) + (D.kasir || ''));
+  out.push(L(p.nm_pasien || '(                    )', 40) + (D.kasir || ''));
   out.push('');
   out.push(rule('-'));
   out.push(`${KLINIK.nama || ''} - dicetak ${new Date().toLocaleString('id-ID')}`);
@@ -3994,7 +4115,7 @@ function cetakFakturDotMatrixHTML(D) {
   @page { size: 210mm 297mm; margin: 6mm 10mm; }
   html,body{width:190mm;}
   *{margin:0;padding:0;box-sizing:border-box;}
-  body{font-family:'Courier New',monospace;color:#000;font-size:14px;line-height:1.35;}
+  body{font-family:${getFakturFontStack()};color:#000;font-size:14px;line-height:1.35;}
   .head{display:flex;justify-content:space-between;gap:14px;border-bottom:1px solid #000;padding-bottom:3px;}
   .klinik-nama{font-size:19px;font-weight:bold;}
   .klinik-meta{font-size:13px;}
@@ -4055,7 +4176,7 @@ function cetakFakturDotMatrixHTML(D) {
     <div>
       <div class="note">Barang-barang yang sudah dibeli tidak dapat dikembalikan.</div>
       <div class="ttd-wrap">
-        <div class="ttd">Penerima<div class="line">(&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)</div></div>
+        <div class="ttd">Penerima<div class="line">${esc(p.nm_pasien || '')}</div></div>
         <div class="ttd">Hormat Kami<div class="line">${esc(D.kasir || '')}</div></div>
       </div>
     </div>
@@ -4066,7 +4187,7 @@ function cetakFakturDotMatrixHTML(D) {
         ? D.pembayaran.map(bp => `<div class="row"><span>${esc(bp.bank ? `${bp.metode} - ${bp.bank}` : bp.metode)}</span><span>${nf(bp.nominal)}</span></div>`).join('')
         : `<div class="row"><span>Metode</span><span>${esc(D.metode || 'Tunai')}</span></div>`}
       <div class="row grand"><span>TOTAL</span><span>Rp ${nf(totalAkhir)}</span></div>
-      <div class="point"><span>Point diperoleh</span><span>${point}</span></div>
+      ${_pointEnabledGlobal ? `<div class="point"><span>Point diperoleh</span><span>${point}</span></div>` : ''}
     </div>
   </div>
 
@@ -4082,11 +4203,34 @@ function cetakFakturDotMatrixHTML(D) {
 }
 
 // Cetak faktur sesuai mode printer komputer ini
+// Gabungkan baris yg kebagi otomatis krn auto-split FEFO (kd_barang sama tapi jadi >1
+// baris di R_Penjualan krn stoknya diambil dari >1 batch/exp berbeda, lihat
+// autoFefoSplit()) jadi SATU baris saat dicetak — pembeli/pasien tidak perlu tahu
+// urusan batch/exp internal, cukup lihat total qty yg mereka bayar. Exp per-batch
+// TETAP utuh di R_Penjualan/Stok_barang (dipakai kartu stok/FEFO) — ini CUMA
+// menggabungkan tampilan di struk, data aslinya tidak disentuh sama sekali.
+function _gabungItemSplitBatch(items) {
+  const map = new Map();
+  const order = [];
+  (items || []).forEach(it => {
+    const key = [it.kd, it.jenis, it.harga, it.disc || 0, it.beautician || ''].join('|');
+    if (map.has(key)) {
+      map.get(key).qty = (map.get(key).qty || 0) + (it.qty || 0);
+    } else {
+      const copy = { ...it };
+      map.set(key, copy);
+      order.push(key);
+    }
+  });
+  return order.map(k => map.get(k));
+}
+
 function cetakFakturAuto(D) {
   const mode = getPrintMode();
-  if (mode === 'dotmatrix') cetakFakturDotMatrixHTML(D);
-  else if (mode === 'dotmatrix-teks') cetakFakturDotMatrixTeks(D);
-  else cetakFaktur(D);
+  const Dm = { ...D, items: _gabungItemSplitBatch(D.items) };
+  if (mode === 'dotmatrix') cetakFakturDotMatrixHTML(Dm);
+  else if (mode === 'dotmatrix-teks') cetakFakturDotMatrixTeks(Dm);
+  else cetakFaktur(Dm);
 }
 
 // ── RIWAYAT PASIEN QUICK-VIEW ─────────────────────────
@@ -4530,6 +4674,7 @@ function _selesaiPilihPetugas(karyawanList) {
     kasir: currentUser?.nama || '',
     kd_lokasi: currentUser?.kd_lokasi || 'CBG1',
   }});
+  posResetSearchAfterAdd();
 }
 
 // ── Pilih kit perawat untuk bahan treatment (POS, Tahap 4) ──
@@ -4877,7 +5022,7 @@ function cetakResepDigital() {
   </style></head><body>
   <div class="resep-wrap">
   <div class="clinic">
-    <h2>AppClinic</h2>
+    <h2>${klinikInfo.nama}</h2>
     <p>Klinik Kecantikan &amp; Kesehatan</p>
   </div>
   <div class="meta">
@@ -5814,7 +5959,7 @@ pages.pembelian = async () => {
 
 async function pbLoadList() {
   const { filterQ, filterStatus } = _pb;
-  const data = await api(`/api/pembelian?q=${encodeURIComponent(filterQ)}&status=${filterStatus==='semua'?'':filterStatus}`);
+  const data = await api(`/api/pembelian?q=${encodeURIComponent(filterQ)}&status=${filterStatus==='semua'?'':filterStatus}&kd_lokasi=INDUK`);
   _pb.list = data.rows || [];
   pbRenderList();
   const foot = $('pb-left-foot');
@@ -6128,8 +6273,8 @@ function pbRenderForm() {
           </div>
           <div class="pb-field-cell wide">
             <span class="pb-field-lbl">Harga Satuan (Rp)</span>
-            <input id="pb-add-harga" type="number" value="0" min="0"
-              placeholder="0" oninput="pbCalcAdd()">
+            <input id="pb-add-harga" type="text" inputmode="numeric" value="0"
+              placeholder="0" oninput="this.value=formatRibuan(this.value); pbCalcAdd()">
           </div>
           <div class="pb-field-cell" style="flex:0 0 90px;">
             <span class="pb-field-lbl">Diskon %</span>
@@ -6224,7 +6369,9 @@ function pbClearSuplier() {
   _pb.suplier = null;
   pbRenderForm();
 }
+let _supModalContext = 'pb';   // 'pb' (Pembelian Vendor) | 'pbc' (Pembelian Cabang) — modal dipakai bersama
 function pbBukaModalSuplier(kd) {
+  _supModalContext = 'pb';
   $('sup-modal-title').textContent = kd ? 'Edit Supplier' : 'Tambah Supplier Baru';
   $('sup-edit-kd').value  = kd || '';
   $('sup-kd').value       = kd || '';
@@ -6262,9 +6409,12 @@ async function simpanSuplier() {
     notif('Supplier ditambahkan');
   }
   closeModal('modal-suplier');
-  // Auto-select supplier yang baru dibuat
+  // Auto-select supplier yang baru dibuat — ke form yang sedang membuka modal ini
+  // (modal "Tambah Supplier Baru" dipakai bersama Pembelian Vendor & Pembelian Cabang).
   if (!editKd && res.kd_suplier) {
-    _pb.suplier = { kd_suplier: res.kd_suplier, nm_suplier: body.nm_suplier, telp: body.telp, alamat: body.alamat, kontak: body.kontak };
+    const sel = { kd_suplier: res.kd_suplier, nm_suplier: body.nm_suplier, telp: body.telp, alamat: body.alamat, kontak: body.kontak };
+    if (_supModalContext === 'pbc') { _pbc.suplier = sel; pbcRenderForm(); return; }
+    _pb.suplier = sel;
     pbRenderForm();
   }
 }
@@ -6341,12 +6491,23 @@ async function pbHapusFaktur() {
 // ── Barang autocomplete ────────────────────────────
 let _pbBarangResults = [];
 let _pbBarangTimer   = null;
+let _pbBarangSeq     = 0;
 async function pbBarangSearch(q) {
   const dd = $('pb-barang-dd'); if (!dd) return;
   clearTimeout(_pbBarangTimer);
   if (q.length < 1) { dd.classList.remove('open'); return; }
+  // Kasih tahu langsung sedang mencari — tanpa ini kotak terlihat kosong/macet
+  // selama jeda fetch, padahal sebenarnya masih menunggu respons server.
+  dd.innerHTML = `<div class="barang-ac-item" style="cursor:default;color:var(--text3);">Mencari...</div>`;
+  dd.classList.add('open');
+  const mySeq = ++_pbBarangSeq;
   _pbBarangTimer = setTimeout(async () => {
-    _pbBarangResults = await api(`/api/barang-beli?q=${encodeURIComponent(q)}`);
+    const res = await api(`/api/barang-beli?q=${encodeURIComponent(q)}`);
+    // Respons jaringan tidak selalu datang sesuai urutan kirim — kalau ini bukan
+    // lagi pencarian terbaru (user sudah lanjut mengetik), buang hasil basi ini
+    // supaya tidak menimpa dropdown dgn hasil utk kueri yg sudah tidak relevan.
+    if (mySeq !== _pbBarangSeq) return;
+    _pbBarangResults = Array.isArray(res) ? res : [];
     if (_pbBarangResults.length) {
       dd.innerHTML = _pbBarangResults.map((b,i) => {
         const stokNum = b.total_stok || 0;
@@ -6443,7 +6604,7 @@ function pbSelectBarang(idx) {
   if (nmEl) { nmEl.value = ''; nmEl.placeholder = 'Ketik untuk ganti...'; }
   $('pb-add-nm-real').value = b.nm_barang;
   $('pb-add-kd').value      = b.kd_barang;
-  $('pb-add-harga').value   = b.harga_beli || 0;
+  $('pb-add-harga').value   = formatRibuan(Math.round(b.harga_beli || 0));
   $('pb-add-satuan').value  = b.satuan || 'Pcs';
   $('pb-barang-dd')?.classList.remove('open');
   const badge = $('pb-selected-badge');
@@ -6462,13 +6623,13 @@ function pbClearBarang() {
   if (nmEl) { nmEl.value = ''; nmEl.placeholder = 'Ketik nama atau kode barang, lalu pilih dari daftar...'; nmEl.focus(); }
   $('pb-add-nm-real').value = '';
   $('pb-add-kd').value      = '';
-  $('pb-add-harga').value   = 0;
+  $('pb-add-harga').value   = '';
   const badge = $('pb-selected-badge');
   if (badge) badge.classList.remove('visible');
   pbCalcAdd();
 }
 function pbCalcAdd() {
-  const harga = +($('pb-add-harga')?.value||0);
+  const harga = parseRibuan($('pb-add-harga')?.value);
   const qty   = +($('pb-add-qty')?.value||1);
   const disc  = +($('pb-add-disc')?.value||0);
   const ppn   = +($('pb-add-ppn')?.value||0);
@@ -6495,7 +6656,7 @@ async function pbTambahItem() {
     pemilik:      _pb.pemilik || 'P1',
     kd_barang:    kd,
     nm_barang:    nm,
-    harga_asli:   +($('pb-add-harga')?.value||0),
+    harga_asli:   parseRibuan($('pb-add-harga')?.value),
     qty:          +($('pb-add-qty')?.value||1),
     disc:         +($('pb-add-disc')?.value||0),
     ppn:          +($('pb-add-ppn')?.value||0),
@@ -6520,7 +6681,7 @@ async function pbTambahItem() {
     if (el) { el.value=''; el.placeholder='Ketik nama atau kode barang, lalu pilih dari daftar...'; }
     $('pb-add-nm-real').value=''; $('pb-add-kd').value='';
     $('pb-add-qty').value=1; $('pb-add-disc').value=0;
-    $('pb-add-ppn').value=0; $('pb-add-harga').value=0;
+    $('pb-add-ppn').value=0; $('pb-add-harga').value='';
     const badge2 = $('pb-selected-badge'); if(badge2) badge2.classList.remove('visible');
     const prev = $('pb-add-preview'); if(prev) prev.textContent='—';
     const prevS= $('pb-add-preview-sub'); if(prevS) prevS.textContent='—';
@@ -6549,6 +6710,706 @@ async function pbHapusItem(id) {
 
 // Legacy compat — keep beliItems so nothing else breaks
 let beliItems = [];
+
+// ═══ PEMBELIAN CABANG — sama spt Pembelian Vendor, TAPI stok masuk LANGSUNG
+// ke Stok Cabang (tanpa gerbang approval, tanpa pemilik). Lihat app.py
+// '/api/pembelian-cabang/*'. ═══════════════════════════════════════════
+let _pbc = {
+  list: [],
+  selectedFaktur: null,
+  mode: 'idle',
+  faktur: '', tanggal: '', lunas: 'Belum',
+  suplier: null,
+  sistemBayar: 'Kredit',
+  tempo: '',
+  items: [],
+  filterQ: '', filterStatus: 'semua',
+  addKd: '', addNm: '', addSatuan: 'Pcs',
+  addHarga: 0, addQty: 1, addDisc: 0, addPpn: 0, addExp: '',
+};
+let _pbcLastAddedId = null;   // id baris R_Pembelian yg baru ditambah — dipakai utk flash highlight
+let _pbcFlashTimer  = null;
+
+pages['pembelian-cabang'] = async () => {
+  _pbc.filterQ = ''; _pbc.filterStatus = 'semua';
+  _pbc.mode = 'idle'; _pbc.selectedFaktur = null;
+  const c = $('content');
+  c.innerHTML = `
+  <div class="pb-layout">
+    <div class="pb-left">
+      <div class="pb-left-head">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <h3>Riwayat Pembelian Cabang</h3>
+          <button class="btn btn-primary" style="padding:6px 14px;font-size:12px;" onclick="pbcNewForm()">＋ Baru</button>
+        </div>
+        <div class="pb-search-wrap"><input type="text" id="pbc-q" placeholder="Cari faktur / supplier..." oninput="pbcFilter()"></div>
+        <div class="pb-status-tabs">
+          <div class="pb-stab active" data-pcs="semua"  onclick="pbcSetStatus(this,'semua')">Semua</div>
+          <div class="pb-stab"       data-pcs="belum"   onclick="pbcSetStatus(this,'belum')">Belum Lunas</div>
+          <div class="pb-stab"       data-pcs="lunas"   onclick="pbcSetStatus(this,'lunas')">Lunas</div>
+        </div>
+      </div>
+      <div class="pb-list-body" id="pbc-list-body">
+        <div style="padding:30px;text-align:center;color:var(--text3);">Memuat...</div>
+      </div>
+      <div class="pb-left-foot" id="pbc-left-foot"></div>
+    </div>
+
+    <div class="pb-right" id="pbc-right">
+      <div class="pb-idle">
+        <div class="pb-idle-icon">🛒</div>
+        <div style="font-size:15px;font-weight:600;color:var(--text2);">Pilih transaksi atau buat baru</div>
+        <div style="font-size:12px;">Barang yang dibeli langsung masuk ke Stok Cabang — tanpa approval.</div>
+        <button class="btn btn-primary" style="margin-top:8px;" onclick="pbcNewForm()">＋ Buat Pembelian Baru</button>
+      </div>
+    </div>
+  </div>`;
+  await pbcLoadList();
+};
+
+async function pbcLoadList() {
+  const { filterQ, filterStatus } = _pbc;
+  const data = await api(`/api/pembelian?q=${encodeURIComponent(filterQ)}&status=${filterStatus==='semua'?'':filterStatus}&kd_lokasi=CBG1`);
+  _pbc.list = data.rows || [];
+  pbcRenderList();
+  const foot = $('pbc-left-foot');
+  if (foot) {
+    foot.innerHTML = `
+      <div style="display:flex;justify-content:space-between;font-size:11px;margin-bottom:4px;">
+        <span style="color:var(--text3);">Total nilai: <b style="color:var(--gold);font-family:'DM Mono'">${fmt(data.total||0)}</b></span>
+        <span style="color:var(--text3);">${_pbc.list.length} faktur</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;">
+        <span style="color:var(--text3);">Belum lunas: <b style="color:var(--rose);font-family:'DM Mono'">${fmt(data.total_belum||0)}</b></span>
+        <span style="color:var(--text3);">${_pbc.list.filter(r=>r.lunas==='Belum').length} faktur</span>
+      </div>`;
+  }
+}
+
+function pbcRenderList() {
+  const el = $('pbc-list-body');
+  if (!el) return;
+  const rows = _pbc.list;
+  if (!rows.length) {
+    el.innerHTML = '<div style="padding:40px;text-align:center;color:var(--text3);font-size:13px;">Tidak ada data</div>';
+    return;
+  }
+  el.innerHTML = rows.map(r => {
+    const isActive = _pbc.selectedFaktur === r.no_faktur;
+    const lunasClass = r.lunas==='Sudah' ? 'badge-green' : 'badge-rose';
+    const lunasLabel = r.lunas==='Sudah' ? 'Lunas' : 'Belum';
+    const bayarIcon  = r.sistem_bayar==='Cash'?'💵':r.sistem_bayar==='Transfer'?'🏦':'📋';
+    return `<div class="pb-item ${isActive?'active':''}" onclick="pbcSelectItem('${r.no_faktur}')">
+      <div class="pb-item-row1">
+        <span class="pb-item-faktur">${r.no_faktur}</span>
+        <span class="pb-item-total">${fmt(r.total_harga)}</span>
+      </div>
+      <div class="pb-item-row2">
+        <span class="pb-item-suplier">${r.nm_suplier||'—'}</span>
+        <span class="pb-item-meta">${fmtDt(r.tanggal,{dateOnly:true})}</span>
+      </div>
+      <div style="display:flex;gap:5px;margin-top:5px;align-items:center;">
+        <span class="badge ${lunasClass}" style="font-size:9px;">${lunasLabel}</span>
+        <span style="font-size:10px;color:var(--text3);">${bayarIcon} ${r.sistem_bayar||'Kredit'}</span>
+        <span style="font-size:10px;color:var(--text3);margin-left:auto;">${r.jumlah_item} item</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+let _pbcFilterTimer = null;
+function pbcFilter() {
+  _pbc.filterQ = $('pbc-q')?.value || '';
+  clearTimeout(_pbcFilterTimer);
+  _pbcFilterTimer = setTimeout(pbcLoadList, 300);
+}
+function pbcSetStatus(el, status) {
+  document.querySelectorAll('[data-pcs]').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  _pbc.filterStatus = status;
+  pbcLoadList();
+}
+
+async function pbcNewForm() {
+  const nf = await api('/api/pembelian-cabang/next-faktur');
+  _pbcLastAddedId = null;
+  _pbc.mode = 'form';
+  _pbc.selectedFaktur = null;
+  _pbc.faktur  = nf.faktur;
+  _pbc.tanggal = nf.tanggal;
+  _pbc.lunas   = 'Belum';
+  _pbc.suplier = null;
+  _pbc.sistemBayar = 'Kredit';
+  _pbc.tempo   = nf.tanggal;
+  _pbc.items   = [];
+  _pbc.addKd=''; _pbc.addNm=''; _pbc.addSatuan='Pcs';
+  _pbc.addHarga=0; _pbc.addQty=1; _pbc.addDisc=0; _pbc.addPpn=0;
+  _pbc.addExp  = localDatePlus(365);
+  pbcRenderForm();
+  pbcRenderList();
+}
+
+async function pbcSelectItem(faktur) {
+  _pbcLastAddedId = null;
+  _pbc.selectedFaktur = faktur;
+  const data = await api(`/api/pembelian/${faktur}`);
+  const h = data.header || {};
+  _pbc.mode = 'form';
+  _pbc.faktur      = h.no_faktur || faktur;
+  _pbc.tanggal     = h.tanggal   || '';
+  _pbc.lunas       = h.lunas     || 'Belum';
+  _pbc.sistemBayar = h.sistem_bayar || 'Kredit';
+  _pbc.tempo       = h.tempo || h.tanggal || '';
+  _pbc.items       = data.items || [];
+  _pbc.addKd=''; _pbc.addNm=''; _pbc.addSatuan='Pcs';
+  _pbc.addHarga=0; _pbc.addQty=1; _pbc.addDisc=0; _pbc.addPpn=0;
+  _pbc.addExp = localDatePlus(365);
+  const firstItem = _pbc.items[0];
+  if (firstItem && firstItem.nm_suplier) {
+    _pbc.suplier = { kd_suplier: firstItem.kd_suplier, nm_suplier: firstItem.nm_suplier, telp: '', alamat: '' };
+    const supRows = await api(`/api/suplier?q=${encodeURIComponent(firstItem.nm_suplier)}`);
+    const match = supRows.find(s => s.kd_suplier === firstItem.kd_suplier);
+    if (match) _pbc.suplier = match;
+  } else {
+    _pbc.suplier = null;
+  }
+  pbcRenderForm();
+  pbcRenderList();
+}
+
+// Selaras _pembelian_edit_guard() di backend: approved pakai aturan waktu
+// lama (>1 hari hanya admin/supervisor) — tak ada status draft/submitted di sini.
+function pbcCanEdit() {
+  const role = currentUser?.role;
+  if (role === 'admin' || role === 'supervisor') return true;
+  if (!_pbc.tanggal) return true;
+  const tgl = new Date(_pbc.tanggal.slice(0,10) + 'T00:00:00');
+  const ageDays = Math.floor((new Date(todayLocal() + 'T00:00:00') - tgl) / 86400000);
+  return ageDays <= 1;
+}
+
+function pbcRenderForm() {
+  const right = $('pbc-right');
+  if (!right) return;
+  const isLunas = _pbc.lunas === 'Sudah';
+  const canEdit = pbcCanEdit();
+  const { faktur, tanggal, sistemBayar, tempo, items, suplier, lunas } = _pbc;
+
+  const cashAct    = sistemBayar==='Cash'     ? 'active cash'     : '';
+  const kreditAct  = sistemBayar==='Kredit'   ? 'active kredit'   : '';
+  const transferAct= sistemBayar==='Transfer' ? 'active transfer'  : '';
+
+  const totalItems  = items.reduce((s,i) => s + i.sub_total, 0);
+  const totalItems2 = items.reduce((s,i) => s + (i.qty||0), 0);
+
+  right.innerHTML = `
+  <div class="pb-form-wrap">
+    <div class="pb-form-topbar">
+      <span class="pb-faktur-badge">📄 ${faktur}</span>
+      <span class="pb-tgl-badge">📅 ${tanggal}</span>
+      <div style="flex:1;"></div>
+      <span class="badge badge-green" style="font-size:12px;padding:5px 12px;">🛒 Masuk Stok Cabang</span>
+      <span class="badge ${isLunas?'badge-green':'badge-rose'}" style="font-size:12px;padding:5px 12px;">${isLunas?'✓ Lunas':'⏳ Belum Lunas'}</span>
+      ${!canEdit ? `<span class="badge badge-gray" style="font-size:11px;padding:5px 10px;" title="Pembelian >1 hari — hanya Administrator/Supervisor">🔒 Terkunci</span>` : ''}
+      ${canEdit && !isLunas && items.length > 0 ? `<button class="btn btn-ghost" style="border-color:var(--teal);color:var(--teal);font-size:12px;" onclick="pbcTandaiLunas()">✓ Tandai Lunas</button>` : ''}
+      ${canEdit && _pbc.selectedFaktur ? `<button class="btn btn-ghost" style="border-color:var(--rose);color:var(--rose);font-size:12px;" onclick="pbcHapusFaktur()">🗑 Hapus</button>` : ''}
+    </div>
+
+    <div class="grid-2" style="gap:14px;margin-bottom:18px;">
+      <div class="pb-sup-card">
+        <h4>Supplier</h4>
+        ${suplier ? `
+        <div class="sup-selected">
+          <div style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--gold));display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:700;color:#fff;flex-shrink:0;">
+            ${(suplier.nm_suplier||'?')[0].toUpperCase()}
+          </div>
+          <div class="sup-sel-info">
+            <div class="sup-sel-name">${suplier.nm_suplier}</div>
+            <div class="sup-sel-meta">${suplier.kd_suplier}${suplier.telp?' · '+suplier.telp:''}</div>
+            ${suplier.alamat?`<div class="sup-sel-meta">${suplier.alamat}</div>`:''}
+          </div>
+          <button class="btn btn-ghost" style="font-size:11px;padding:3px 8px;flex-shrink:0;" onclick="pbcClearSuplier()">Ganti</button>
+        </div>
+        ` : `
+        <div class="sup-search-wrap" id="sup-wrap">
+          <input id="pbc-sup-q" type="text" placeholder="Ketik nama supplier..." autocomplete="off"
+            oninput="pbcSupSearch(this.value)" onkeydown="pbcSupKeydown(event)">
+          <div class="sup-dropdown" id="pbc-sup-dd"></div>
+        </div>
+        <div style="margin-top:6px;">
+          <button class="btn btn-ghost" style="font-size:11px;width:100%;color:var(--teal);border-color:var(--teal);" onclick="pbcBukaModalSuplier()">＋ Tambah Supplier Baru</button>
+        </div>
+        `}
+      </div>
+
+      <div class="pb-pay-card">
+        <h4>Cara Pembayaran</h4>
+        <div class="pb-pay-tabs">
+          <div class="pb-pay-tab ${cashAct}"     onclick="pbcSetBayar('Cash')">💵 Cash</div>
+          <div class="pb-pay-tab ${kreditAct}"   onclick="pbcSetBayar('Kredit')">📋 Kredit</div>
+          <div class="pb-pay-tab ${transferAct}" onclick="pbcSetBayar('Transfer')">🏦 Transfer</div>
+        </div>
+        ${sistemBayar !== 'Cash' ? `
+        <div class="form-row" style="margin-bottom:0;">
+          <label>Jatuh Tempo</label>
+          <input type="date" id="pbc-tempo" value="${tempo}" style="width:100%;" onchange="pbcUpdateHeader()">
+        </div>` : `<div style="font-size:12px;color:var(--text3);margin-top:4px;">Pembayaran langsung, tidak perlu jatuh tempo.</div>`}
+      </div>
+    </div>
+
+    <div class="pb-items-section">
+      <div class="pb-items-head">
+        <h4>Daftar Barang (${items.length} item · ${totalItems2} unit)</h4>
+        <span style="font-size:12px;font-weight:600;color:var(--text3);">Total: <span style="color:var(--gold);font-family:'DM Mono';">${fmt(totalItems)}</span></span>
+      </div>
+
+      ${items.length > 0 ? `
+      <table class="pb-items-table">
+        <thead>
+          <tr>
+            <th>Barang</th>
+            <th style="text-align:center;width:60px;">Qty</th>
+            <th style="text-align:right;width:100px;">Harga Asli</th>
+            <th style="text-align:center;width:55px;">Disc%</th>
+            <th style="text-align:right;width:100px;">Harga Beli</th>
+            <th style="text-align:center;width:50px;">PPN%</th>
+            <th style="text-align:right;width:100px;">Subtotal</th>
+            <th style="width:80px;">Expired</th>
+            <th style="width:32px;"></th>
+          </tr>
+        </thead>
+        <tbody>
+          ${items.map(item => {
+            const hargaBeli = item.harga_beli_kotor || (item.harga_asli * (100-item.disc)/100);
+            const justAdded = item.id === _pbcLastAddedId;
+            return `<tr class="${justAdded?'pbc-row-flash':''}">
+              <td>
+                <div style="font-weight:600;color:var(--text);font-size:13px;">${item.nm_barang}</div>
+                <div style="font-size:10px;font-family:'DM Mono';color:var(--text3);">${item.kd_barang}</div>
+              </td>
+              <td style="text-align:center;font-weight:700;">${item.qty}</td>
+              <td style="text-align:right;font-family:'DM Mono';">${fmt(item.harga_asli)}</td>
+              <td style="text-align:center;color:${item.disc>0?'var(--rose)':'var(--text3)'};">${item.disc>0?item.disc+'%':'—'}</td>
+              <td style="text-align:right;font-family:'DM Mono';color:var(--teal);">${fmt(hargaBeli)}</td>
+              <td style="text-align:center;color:var(--text3);">${item.ppn>0?item.ppn+'%':'—'}</td>
+              <td style="text-align:right;font-family:'DM Mono';font-weight:700;color:var(--gold);">${fmt(item.sub_total)}</td>
+              <td style="font-size:11px;color:var(--text3);">${fmtExp(item.exp)}</td>
+              <td>
+                ${canEdit ? `<button onclick="pbcHapusItem(${item.id})" style="background:none;border:none;color:var(--rose);cursor:pointer;font-size:16px;padding:2px 4px;border-radius:4px;" title="Hapus item (stok dikembalikan)">×</button>` : ''}
+              </td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>` : `
+      <div style="text-align:center;padding:28px;color:var(--text3);font-size:13px;border:2px dashed var(--border);border-radius:var(--radius);margin-bottom:12px;">
+        Belum ada barang. Tambahkan item di bawah — langsung masuk Stok Cabang.
+      </div>`}
+
+      ${!canEdit ? `<div style="background:rgba(148,108,14,.08);border-left:3px solid var(--gold);border-radius:0 8px 8px 0;padding:10px 14px;font-size:12px;color:var(--text2);line-height:1.6;">🔒 Pembelian lebih dari 1 hari — penambahan/ubah/hapus item hanya dapat dilakukan oleh <b>Administrator</b> atau <b>Supervisor</b>.</div>` : ''}
+      <div class="pb-add-panel" id="pbc-add-panel" style="${canEdit?'':'display:none'}">
+
+        <div class="pbc-add-flash" id="pbc-add-flash" style="display:none;"></div>
+
+        <div class="pb-add-search">
+          <div class="pb-add-search-icon">🔍</div>
+          <div class="barang-ac-wrap">
+            <input id="pbc-add-nm" type="text"
+              placeholder="Ketik nama atau kode barang, lalu pilih dari daftar..."
+              autocomplete="off"
+              oninput="pbcBarangSearch(this.value)" onkeydown="pbcBarangKeydown(event)">
+            <div class="barang-ac-dd" id="pbc-barang-dd"></div>
+          </div>
+          <input type="hidden" id="pbc-add-nm-real" value="">
+          <div class="pb-add-search-badge" id="pbc-selected-badge" onclick="pbcClearBarang()">
+            <span id="pbc-selected-name">—</span>
+            <span style="opacity:.6;font-size:10px;">✕</span>
+          </div>
+          <input type="hidden" id="pbc-add-kd" value="">
+        </div>
+
+        <div class="pb-add-fields">
+          <div class="pb-field-cell" style="flex:0 0 70px;text-align:center;">
+            <span class="pb-field-lbl">Qty</span>
+            <input id="pbc-add-qty" type="number" value="1" min="1"
+              style="text-align:center;font-size:20px;" oninput="pbcCalcAdd()">
+          </div>
+          <div class="pb-field-cell wide">
+            <span class="pb-field-lbl">Harga Satuan (Rp)</span>
+            <input id="pbc-add-harga" type="text" inputmode="numeric" value="0"
+              placeholder="0" oninput="this.value=formatRibuan(this.value); pbcCalcAdd()">
+          </div>
+          <div class="pb-field-cell" style="flex:0 0 90px;">
+            <span class="pb-field-lbl">Diskon %</span>
+            <input id="pbc-add-disc" type="number" value="0" min="0" max="100"
+              placeholder="0" oninput="pbcCalcAdd()">
+          </div>
+          <div class="pb-field-cell" style="flex:0 0 80px;">
+            <span class="pb-field-lbl">PPN %</span>
+            <input id="pbc-add-ppn" type="number" value="0" min="0"
+              placeholder="0" oninput="pbcCalcAdd()">
+          </div>
+          <div class="pb-field-cell" style="flex:0 0 90px;">
+            <span class="pb-field-lbl">Satuan</span>
+            <input id="pbc-add-satuan" value="Pcs" placeholder="Pcs"
+              style="font-size:14px;font-family:inherit;font-weight:600;">
+          </div>
+          <div class="pb-field-cell" style="flex:0 0 150px;">
+            <span class="pb-field-lbl">Tgl Expired</span>
+            <input id="pbc-add-exp" type="date" value="${_pbc.addExp}"
+              style="font-size:12px;font-family:inherit;font-weight:500;">
+          </div>
+        </div>
+
+        <div class="pb-add-footer">
+          <div class="pb-preview-item">
+            <span class="pb-preview-lbl">Harga setelah diskon</span>
+            <span class="pb-preview-val" id="pbc-add-preview" style="color:var(--teal);">—</span>
+          </div>
+          <div style="width:1px;height:32px;background:var(--border);"></div>
+          <div class="pb-preview-item">
+            <span class="pb-preview-lbl">Subtotal</span>
+            <span class="pb-preview-val" id="pbc-add-preview-sub" style="color:var(--gold);">—</span>
+          </div>
+          <div style="flex:1;"></div>
+          <button class="pb-add-btn" onclick="pbcTambahItem()">＋ Tambah ke Faktur — Masuk Stok Cabang</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="pb-total-bar">
+    <div class="pb-total-item">
+      <span class="pb-total-label">Jumlah Item</span>
+      <span class="pb-total-val">${items.length}</span>
+    </div>
+    <div class="pb-total-item">
+      <span class="pb-total-label">Total Unit</span>
+      <span class="pb-total-val" style="color:var(--teal);">${fmtNum(totalItems2)}</span>
+    </div>
+    <div style="flex:1;"></div>
+    <div class="pb-total-item" style="text-align:right;">
+      <span class="pb-total-label">Total Pembelian</span>
+      <span class="pb-total-val" style="color:var(--gold);font-size:22px;">${fmt(totalItems)}</span>
+    </div>
+    ${sistemBayar !== 'Cash' && !isLunas ? `
+    <div class="pb-total-item" style="text-align:right;">
+      <span class="pb-total-label">Status Hutang</span>
+      <span class="pb-total-val" style="color:var(--rose);font-size:14px;">⏳ Belum Lunas</span>
+    </div>` : ''}
+  </div>`;
+}
+
+let _pbcSupResults = [];
+async function pbcSupSearch(q) {
+  const dd = $('pbc-sup-dd'); if (!dd) return;
+  if (q.length < 1) { dd.classList.remove('open'); return; }
+  _pbcSupResults = await api(`/api/suplier?q=${encodeURIComponent(q)}`);
+  dd.innerHTML = [
+    ..._pbcSupResults.map((s,i) => `
+      <div class="sup-dd-item" onclick="pbcSelectSuplier(${i})">
+        <b>${s.nm_suplier}</b>
+        <span style="font-size:10px;color:var(--text3);margin-left:6px;">${s.kd_suplier}</span>
+        ${s.telp?`<span style="font-size:10px;color:var(--text3);margin-left:6px;">· ${s.telp}</span>`:''}
+      </div>`),
+    `<div class="sup-dd-item sup-new" onclick="pbcBukaModalSuplier()">＋ Tambah "<b>${q}</b>" sebagai supplier baru</div>`
+  ].join('');
+  dd.classList.add('open');
+}
+function pbcSupKeydown(e) {
+  if (e.key === 'Escape') { $('pbc-sup-dd')?.classList.remove('open'); }
+}
+function pbcSelectSuplier(idx) {
+  _pbc.suplier = _pbcSupResults[idx];
+  $('pbc-sup-dd')?.classList.remove('open');
+  pbcRenderForm();
+  pbcUpdateHeader();
+}
+function pbcClearSuplier() {
+  _pbc.suplier = null;
+  pbcRenderForm();
+}
+function pbcBukaModalSuplier(kd) {
+  _supModalContext = 'pbc';
+  $('sup-modal-title').textContent = kd ? 'Edit Supplier' : 'Tambah Supplier Baru';
+  $('sup-edit-kd').value  = kd || '';
+  $('sup-kd').value       = kd || '';
+  $('sup-nm').value       = '';
+  $('sup-telp').value     = '';
+  $('sup-kontak').value   = '';
+  $('sup-alamat').value   = '';
+  if (kd) {
+    const found = _pbcSupResults.find(s => s.kd_suplier === kd) || _pbc.suplier;
+    if (found) {
+      $('sup-nm').value     = found.nm_suplier || '';
+      $('sup-telp').value   = found.telp       || '';
+      $('sup-kontak').value = found.kontak     || '';
+      $('sup-alamat').value = found.alamat     || '';
+    }
+  }
+  openModal('modal-suplier');
+}
+
+function pbcSetBayar(mode) {
+  _pbc.sistemBayar = mode;
+  if (mode === 'Cash') _pbc.lunas = 'Sudah';
+  pbcRenderForm();
+  pbcUpdateHeader();
+}
+async function pbcUpdateHeader() {
+  if (!_pbc.faktur) return;
+  const tempo = $('pbc-tempo')?.value || _pbc.tempo;
+  _pbc.tempo = tempo;
+  if (!_pbc.items.length) return;
+  await api(`/api/pembelian/${_pbc.faktur}`, {
+    method: 'PUT',
+    body: {
+      nm_suplier:  _pbc.suplier?.nm_suplier || '',
+      kd_suplier:  _pbc.suplier?.kd_suplier || '',
+      sistem_bayar: _pbc.sistemBayar,
+      tempo:        tempo,
+      lunas:        _pbc.lunas,
+    }
+  });
+}
+async function pbcTandaiLunas() {
+  if (!_pbc.faktur) return;
+  if (!pbcCanEdit()) { notif('Pembelian >1 hari — hanya Administrator/Supervisor', 'error'); return; }
+  const res = await api(`/api/pembelian/${_pbc.faktur}`, {method:'PUT', body:{lunas:'Sudah'}});
+  if (res && res.ok === false) { notif(res.msg || 'Gagal', 'error'); return; }
+  _pbc.lunas = 'Sudah';
+  pbcRenderForm();
+  pbcLoadList();
+  notif('Faktur ditandai lunas');
+}
+async function pbcHapusFaktur() {
+  if (!_pbc.selectedFaktur) return;
+  if (!pbcCanEdit()) { notif('Pembelian >1 hari — hanya Administrator/Supervisor', 'error'); return; }
+  if (!confirm(`Hapus faktur ${_pbc.selectedFaktur}? Stok cabang akan dikembalikan.`)) return;
+  const res = await api(`/api/pembelian-cabang/${_pbc.selectedFaktur}`, {method:'DELETE'});
+  if (res && res.ok === false) { notif(res.msg || 'Gagal menghapus', 'error'); return; }
+  _pbc.mode = 'idle'; _pbc.selectedFaktur = null;
+  const right = $('pbc-right');
+  if (right) right.innerHTML = `<div class="pb-idle"><div class="pb-idle-icon">🛒</div><div style="font-size:15px;font-weight:600;color:var(--text2);">Faktur dihapus</div><button class="btn btn-primary" style="margin-top:8px;" onclick="pbcNewForm()">＋ Buat Pembelian Baru</button></div>`;
+  pbcLoadList();
+  notif('Faktur dihapus, stok cabang dikembalikan');
+}
+
+let _pbcBarangResults = [];
+let _pbcBarangTimer   = null;
+let _pbcBarangSeq     = 0;
+async function pbcBarangSearch(q) {
+  const dd = $('pbc-barang-dd'); if (!dd) return;
+  clearTimeout(_pbcBarangTimer);
+  if (q.length < 1) { dd.classList.remove('open'); return; }
+  // Kasih tahu langsung sedang mencari — tanpa ini kotak terlihat kosong/macet
+  // selama jeda fetch, padahal sebenarnya masih menunggu respons server.
+  dd.innerHTML = `<div class="barang-ac-item" style="cursor:default;color:var(--text3);">Mencari...</div>`;
+  dd.classList.add('open');
+  const mySeq = ++_pbcBarangSeq;
+  _pbcBarangTimer = setTimeout(async () => {
+    const res = await api(`/api/barang-beli?q=${encodeURIComponent(q)}&kd_lokasi=CBG1`);
+    // Respons jaringan tidak selalu datang sesuai urutan kirim — kalau ini bukan
+    // lagi pencarian terbaru (user sudah lanjut mengetik), buang hasil basi ini
+    // supaya tidak menimpa dropdown dgn hasil utk kueri yg sudah tidak relevan.
+    if (mySeq !== _pbcBarangSeq) return;
+    _pbcBarangResults = Array.isArray(res) ? res : [];
+    if (_pbcBarangResults.length) {
+      dd.innerHTML = _pbcBarangResults.map((b,i) => {
+        const stokNum = b.total_stok || 0;
+        const badgeClass = stokNum > 5 ? 'stok-ok' : stokNum > 0 ? 'stok-low' : 'stok-low';
+        const badgeLabel = stokNum > 0 ? `Stok cabang: ${stokNum} ${b.satuan||''}` : 'Stok cabang habis';
+        return `<div class="barang-ac-item" onclick="pbcSelectBarang(${i})">
+          <div class="ba-icon">📦</div>
+          <div class="ba-body">
+            <div class="ba-name">${b.nm_barang}</div>
+            <div class="ba-meta">
+              <span style="font-family:'DM Mono';font-size:11px;color:var(--text3);">${b.kd_barang}</span>
+              <span class="ba-badge ${badgeClass}">${badgeLabel}</span>
+              <span class="ba-harga">Rp ${(b.harga_beli||0).toLocaleString('id-ID')}</span>
+              <span style="color:var(--text3);">${b.satuan||'Pcs'}</span>
+            </div>
+          </div>
+        </div>`;
+      }).join('');
+    } else {
+      const qEsc = q.replace(/'/g,"\\'");
+      dd.innerHTML = `<div class="barang-ac-item" style="cursor:pointer;" onclick="pbcNewBarang('${qEsc}')">
+        <div class="ba-icon">➕</div>
+        <div class="ba-body">
+          <div class="ba-name">Daftarkan "${q}" ke Master Barang</div>
+          <div class="ba-meta">Belum ada di master — buat barang baru dengan kode konsisten</div>
+        </div>
+      </div>`;
+    }
+    dd.classList.add('open');
+  }, 200);
+}
+
+function pbcNewBarang(prefill) {
+  $('pbc-barang-dd')?.classList.remove('open');
+  openModal('modal-generic', `
+  <div style="font-size:16px;font-weight:700;margin-bottom:4px">Barang Baru ke Master</div>
+  <div style="font-size:12px;color:var(--text3);margin-bottom:18px">Kode = nama yang tampil di faktur. Setelah disimpan, barang langsung terpilih di form pembelian.</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+    <div style="grid-column:1/3">
+      <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">Kode Barang / Nama Tampil</label>
+      <input class="form-inp" id="pbcnb-kd" value="${(prefill||'').replace(/"/g,'&quot;')}" placeholder="mis. Cream MR tube" style="width:100%">
+    </div>
+    <div style="grid-column:1/3">
+      <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">Nama Generik / Komposisi (internal)</label>
+      <input class="form-inp" id="pbcnb-generik" placeholder="zat aktif, mis. Tretinoin 0.1%" style="width:100%">
+    </div>
+    <div>
+      <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">Merk / Produsen</label>
+      <input class="form-inp" id="pbcnb-merk" style="width:100%">
+    </div>
+    <div>
+      <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">Satuan</label>
+      <input class="form-inp" id="pbcnb-satuan" value="Pcs" style="width:100%">
+    </div>
+    <div style="grid-column:1/3">
+      <label style="font-size:11px;color:var(--text3);display:block;margin-bottom:4px">Harga Jual ke Pasien (Rp) — bisa diisi nanti di Master</label>
+      <input class="form-inp" id="pbcnb-harga" type="number" value="0" style="width:100%">
+    </div>
+  </div>
+  <div style="display:flex;gap:10px;margin-top:6px">
+    <button class="btn btn-primary" style="flex:1" onclick="pbcNewBarangSave()">Simpan & Pilih</button>
+    <button class="btn btn-ghost" onclick="closeModal('modal-generic')">Batal</button>
+  </div>`);
+  setTimeout(() => $('pbcnb-kd')?.focus(), 50);
+}
+
+async function pbcNewBarangSave() {
+  const kd = $('pbcnb-kd')?.value?.trim();
+  if (!kd) { notif('Kode barang wajib diisi','error'); return; }
+  const body = {
+    kd_barang:  kd,
+    nm_barang:  kd,
+    nm_generik: $('pbcnb-generik')?.value?.trim() || '',
+    merk:       $('pbcnb-merk')?.value?.trim() || '',
+    satuan:     $('pbcnb-satuan')?.value?.trim() || 'Pcs',
+    harga_jual: +($('pbcnb-harga')?.value || 0),
+  };
+  const res = await api('/api/barang', {method:'POST', body});
+  if (res.ok === false) { notif(res.msg || 'Gagal menyimpan','error'); return; }
+  closeModal('modal-generic');
+  notif(`✓ "${kd}" ditambahkan ke master`);
+  _pbcBarangResults = [{kd_barang: kd, nm_barang: kd, satuan: body.satuan,
+                        harga_beli: 0, harga_jual: body.harga_jual, total_stok: 0}];
+  pbcSelectBarang(0);
+}
+function pbcBarangKeydown(e) {
+  if (e.key === 'Escape') { $('pbc-barang-dd')?.classList.remove('open'); }
+}
+function pbcSelectBarang(idx) {
+  const b = _pbcBarangResults[idx];
+  const nmEl = $('pbc-add-nm');
+  if (nmEl) { nmEl.value = ''; nmEl.placeholder = 'Ketik untuk ganti...'; }
+  $('pbc-add-nm-real').value = b.nm_barang;
+  $('pbc-add-kd').value      = b.kd_barang;
+  $('pbc-add-harga').value   = formatRibuan(Math.round(b.harga_beli || 0));
+  $('pbc-add-satuan').value  = b.satuan || 'Pcs';
+  $('pbc-barang-dd')?.classList.remove('open');
+  const badge = $('pbc-selected-badge');
+  const bname = $('pbc-selected-name');
+  if (badge && bname) {
+    const stokLabel = (b.total_stok||0) > 0 ? `Stok cabang: ${b.total_stok} ${b.satuan||''}` : 'Stok cabang habis';
+    bname.innerHTML = `<b>${b.nm_barang}</b> &nbsp;·&nbsp; ${stokLabel}`;
+    badge.classList.add('visible');
+  }
+  pbcCalcAdd();
+  setTimeout(() => { const q = $('pbc-add-qty'); if (q) { q.focus(); q.select(); } }, 50);
+}
+function pbcClearBarang() {
+  const nmEl = $('pbc-add-nm');
+  if (nmEl) { nmEl.value = ''; nmEl.placeholder = 'Ketik nama atau kode barang, lalu pilih dari daftar...'; nmEl.focus(); }
+  $('pbc-add-nm-real').value = '';
+  $('pbc-add-kd').value      = '';
+  $('pbc-add-harga').value   = '';
+  const badge = $('pbc-selected-badge');
+  if (badge) badge.classList.remove('visible');
+  pbcCalcAdd();
+}
+function pbcCalcAdd() {
+  const harga = parseRibuan($('pbc-add-harga')?.value);
+  const qty   = +($('pbc-add-qty')?.value||1);
+  const disc  = +($('pbc-add-disc')?.value||0);
+  const ppn   = +($('pbc-add-ppn')?.value||0);
+  const harDisc = harga * (100 - disc) / 100;
+  const sub     = harDisc * qty;
+  const pre = $('pbc-add-preview'); if (pre) pre.textContent = fmt(harDisc);
+  const preSub = $('pbc-add-preview-sub'); if (preSub) preSub.textContent = fmt(sub);
+}
+
+async function pbcTambahItem() {
+  const kd  = $('pbc-add-kd')?.value.trim();
+  const nm  = ($('pbc-add-nm-real')?.value.trim()) || kd;
+  if (!kd) { notif('Pilih barang dari master, atau daftarkan dulu lewat tombol "Daftarkan…"', 'error'); return; }
+  if (!_pbc.faktur) { notif('Faktur tidak tersedia', 'error'); return; }
+  if (!pbcCanEdit()) { notif('Pembelian >1 hari — hanya Administrator/Supervisor', 'error'); return; }
+
+  const body = {
+    no_faktur:    _pbc.faktur,
+    kd_suplier:   _pbc.suplier?.kd_suplier  || '',
+    nm_suplier:   _pbc.suplier?.nm_suplier  || '',
+    sistem_bayar: _pbc.sistemBayar,
+    tempo:        $('pbc-tempo')?.value || _pbc.tempo,
+    kd_barang:    kd,
+    nm_barang:    nm,
+    harga_asli:   parseRibuan($('pbc-add-harga')?.value),
+    qty:          +($('pbc-add-qty')?.value||1),
+    disc:         +($('pbc-add-disc')?.value||0),
+    ppn:          +($('pbc-add-ppn')?.value||0),
+    satuan:       $('pbc-add-satuan')?.value || 'Pcs',
+    exp:          $('pbc-add-exp')?.value || todayLocal(),
+  };
+  if (body.harga_asli <= 0) { notif('Harga harus lebih dari 0', 'error'); return; }
+  if (body.qty <= 0) { notif('Qty harus lebih dari 0', 'error'); return; }
+
+  const res = await api('/api/pembelian-cabang/item', {method:'POST', body});
+  if (res.ok) {
+    notif(`✓ ${nm} (${body.qty}×) ditambahkan — langsung masuk Stok Cabang`);
+    const data = await api(`/api/pembelian/${_pbc.faktur}`);
+    _pbc.items = data.items || [];
+    if (_pbc.sistemBayar === 'Cash') _pbc.lunas = 'Sudah';
+    _pbcLastAddedId = res.id;
+    pbcRenderForm();
+    pbcLoadList();
+    const el = $('pbc-add-nm');
+    if (el) { el.value=''; el.placeholder='Ketik nama atau kode barang, lalu pilih dari daftar...'; }
+    $('pbc-add-nm-real').value=''; $('pbc-add-kd').value='';
+    $('pbc-add-qty').value=1; $('pbc-add-disc').value=0;
+    $('pbc-add-ppn').value=0; $('pbc-add-harga').value='';
+    const badge2 = $('pbc-selected-badge'); if(badge2) badge2.classList.remove('visible');
+    const prev = $('pbc-add-preview'); if(prev) prev.textContent='—';
+    const prevS= $('pbc-add-preview-sub'); if(prevS) prevS.textContent='—';
+    const flash = $('pbc-add-flash');
+    if (flash) {
+      flash.style.display = 'flex';
+      flash.innerHTML = `✓ <b>${nm}</b> (${body.qty}×) sudah masuk ke faktur ini — faktur <b>belum ditutup</b>, langsung cari barang berikutnya di kolom di bawah ini untuk menambah lagi.`;
+      clearTimeout(_pbcFlashTimer);
+      _pbcFlashTimer = setTimeout(() => { if (flash) flash.style.display = 'none'; }, 6000);
+    }
+    el?.focus();
+  } else {
+    notif(res.msg || 'Gagal menambahkan item', 'error');
+  }
+}
+
+async function pbcHapusItem(id) {
+  if (!pbcCanEdit()) { notif('Pembelian >1 hari — hanya Administrator/Supervisor', 'error'); return; }
+  if (!confirm('Hapus item ini? Stok cabang akan dikembalikan.')) return;
+  const res = await api(`/api/pembelian-cabang/item/${id}`, {method:'DELETE'});
+  if (res.ok) {
+    notif('Item dihapus, stok cabang dikembalikan');
+    const data = await api(`/api/pembelian/${_pbc.faktur}`);
+    _pbc.items = data.items || [];
+    pbcRenderForm();
+    pbcLoadList();
+  } else {
+    notif(res.msg || 'Gagal menghapus item', 'error');
+  }
+}
 
 // ── TERIMA KIRIMAN STOK (import file _P/_R dari gedung lain) ──────────
 const _tkStatusBadge = {
@@ -7181,7 +8042,7 @@ function renderLapTable(rows) {
           <td>${fmtDt(r.tanggal,{dateOnly:true})}</td>
           <td style="font-family:'DM Mono',monospace;font-size:11px;color:var(--text3);">${r.kd_pasien||'—'}</td>
           <td class="strong">${r.nm_pasien||'—'}</td>
-          <td>${r.dokter||'—'}</td>
+          <td>${r.dokter_nickname||r.dokter||'—'}</td>
           <td style="font-family:'DM Mono',monospace;font-weight:600;">${fmt(r.total_harga)}</td>
           <td><span class="badge ${r.metode_bayar==='Internal'?'badge-gold':'badge-gray'}" ${r.metode_bayar==='Internal'?'title="Gratis — tidak dihitung omzet"':''}>${r.metode_bayar==='Internal'?'🎁 ':''}${r.metode_bayar||'Tunai'}</span>${r.metode_bayar==='Point Member' && r.point_dipakai ? `<div style="font-size:10px;color:#dc2626;font-weight:700;margin-top:2px;">${fmtNum(r.point_dipakai)} pt dipakai</div>` : ''}</td>
           <td><span class="badge ${r.status==='done'?'badge-green':'badge-gold'}">${r.status==='done'?'Selesai':'Proses'}</span></td>
@@ -7201,7 +8062,7 @@ function renderLapTable(rows) {
 // ── Ubah metode pembayaran (hanya faktur HARI INI, lihat app.py
 // penjualan_ubah_metode_bayar) — Point Member sengaja tidak ditawarkan di sini
 // (sudah difilter di tombolnya), krn ganti ke/dari situ butuh alur bayar penuh.
-const _METODE_BAYAR_EDITABLE = ['Tunai', 'Transfer', 'Debit', 'Internal'];
+const _METODE_BAYAR_EDITABLE = ['Tunai', 'Transfer', 'Debit', 'QRIS', 'Internal'];
 function bukaUbahMetode(noFaktur, metodeLama) {
   const opts = _METODE_BAYAR_EDITABLE.map(m =>
     `<option value="${m}" ${m===metodeLama?'selected':''}>${m}</option>`).join('');
@@ -7884,7 +8745,7 @@ async function cetakResepDigitalDariHistori(id) {
     .ttd{width:110px;border-top:1px solid #111;padding-top:4px;text-align:center;margin-top:48px;margin-left:auto;font-size:11px;}
   </style></head><body>
   <div class="resep-wrap">
-  <div class="clinic"><h2>AppClinic</h2><p style="font-size:10px;color:#444;">Klinik Kecantikan &amp; Kesehatan</p></div>
+  <div class="clinic"><h2>${klinikInfo.nama}</h2><p style="font-size:10px;color:#444;">Klinik Kecantikan &amp; Kesehatan</p></div>
   <div class="meta"><span>Tgl: ${tgl}</span><span>${data.no_resep}</span></div>
   <div class="pasien">
     <b>${data.nm_pasien||p?.nm_pasien||'—'}</b><br>
@@ -8253,7 +9114,7 @@ async function rmCetakRiwayat(kd) {
       .footer{margin-top:20px;text-align:center;font-size:10px;color:#978268;border-top:1px solid #e2dbd0;padding-top:10px;}
       @media print{body{padding:10px 16px;}}
     </style></head><body>
-    <h1>AppClinic</h1>
+    <h1>${klinikInfo.nama}</h1>
     <div class="sub">Rekam Medik Pasien</div>
     <div class="pasien-block">
       <div class="pasien-name">${p.nm_pasien}</div>
@@ -8281,7 +9142,7 @@ async function rmCetakRiwayat(kd) {
         </div>
       </div>`;
     }).join('')}
-    <div class="footer">AppClinic · Dokumen ini dicetak oleh sistem · ${new Date().toLocaleString('id-ID')}</div>
+    <div class="footer">${klinikInfo.nama} · Dokumen ini dicetak oleh sistem · ${new Date().toLocaleString('id-ID')}</div>
     </body></html>`);
   win.document.close();
   win.focus();
@@ -8314,7 +9175,7 @@ pages['lap-produk'] = async () => {
       </div>
       <div class="filter-group" style="flex:1;min-width:160px;">
         <label>Cari Produk / Perawatan</label>
-        <div class="search-produk-wrap">
+        <div class="search-produk-wrap no-icon">
           <input type="text" id="lp-q" placeholder="Kode atau nama produk..." oninput="lapProdukFilter()">
         </div>
       </div>
@@ -8908,6 +9769,42 @@ async function konfirmDisc() {
   _discEditIdx = null;
 }
 
+// ── HARGA JUAL PER ITEM ───────────────────────────────
+let _hargaEditIdx = null;
+
+function editHargaItem(idx) {
+  const item = posState.items[idx];
+  if(!item) return;
+  _hargaEditIdx = idx;
+  $('harga-item-nama').textContent = item.nama;
+  $('harga-item-input').value = formatRibuan(Math.round(item.harga || 0));
+  openModal('modal-harga-item');
+  setTimeout(() => { $('harga-item-input').focus(); $('harga-item-input').select(); }, 150);
+}
+
+async function konfirmHarga() {
+  if(_hargaEditIdx === null) return;
+  const item = posState.items[_hargaEditIdx];
+  const harga = parseRibuan($('harga-item-input').value);
+  if (harga <= 0) { notif('Harga harus lebih dari 0', 'error'); return; }
+
+  const res = await api('/api/penjualan/item-harga', {method:'PUT', body:{
+    no_faktur: posState.faktur,
+    kd_barang: item.kd,
+    harga,
+  }});
+
+  if(res.ok) {
+    posState.items[_hargaEditIdx].harga = harga;
+    closeModal('modal-harga-item');
+    renderCart();
+    notif(`✓ Harga ${item.nama} diubah jadi ${fmt(harga)}`, 'success');
+  } else {
+    notif(res.msg || 'Gagal update harga', 'error');
+  }
+  _hargaEditIdx = null;
+}
+
 // ── RIWAYAT STOK ─────────────────────────────────────
 async function lihatRiwayatStok(kd, nm) {
   const rows = await api(`/api/riwayat-barang/${encodeURIComponent(kd)}`);
@@ -9496,7 +10393,7 @@ function cetakLapPoint() {
   table{width:100%;border-collapse:collapse;}th{background:#f0fdf4;border-bottom:2px solid #16a34a;padding:6px 8px;text-align:left;font-size:10px;text-transform:uppercase;color:#15803d;}
   td{padding:5px 8px;border-bottom:1px solid #eee;}.r{text-align:right;}.c{text-align:center;}
   tfoot td{border-top:2px solid #16a34a;font-weight:700;background:#f0fdf4;}</style></head><body>
-  <h1>Laporan Point Pasien — AppClinic</h1>
+  <h1>Laporan Point Pasien — ${klinikInfo.nama}</h1>
   <div class="sub">Akumulasi semua waktu${q?` · Pencarian: "${q}"`:''} · Formula ${fmt(_lapPointRate)} = 1 point · Dicetak ${new Date().toLocaleString('id-ID')}</div>
   <table><thead><tr><th>Pasien</th><th>Kode</th><th class="r">Point Masuk</th><th class="r">Point Keluar</th><th class="r">Saldo Total</th><th class="c">Transaksi</th><th>Terakhir</th></tr></thead>
   <tbody>${rows.map(r=>`<tr><td>${r.nm_pasien||'—'}</td><td>${r.kd_pasien}</td><td class="r">${nf(r.point_masuk)}</td><td class="r">${nf(r.point_keluar)}</td><td class="r">${nf(r.saldo_total)}</td><td class="c">${r.jml_transaksi}</td><td>${r.terakhir||'—'}</td></tr>`).join('')}</tbody>
@@ -9589,6 +10486,26 @@ pages['pengaturan'] = async () => {
       </div>
     </div>
 
+    <!-- POINT MEMBER -->
+    <div class="card" style="margin-bottom:18px;">
+      <div class="card-title">💎 Point Member</div>
+      <div style="font-size:12px;color:var(--text3);margin-top:6px;line-height:1.6;">
+        Kalau <b>dinonaktifkan</b>: transaksi baru tidak lagi menghasilkan point, metode bayar
+        "Point Member" disembunyikan di kasir, dan baris "Point diperoleh" hilang dari struk.
+        Saldo point pasien yang <b>sudah ada</b> dari sebelumnya tetap tersimpan utuh — tinggal
+        diaktifkan lagi kalau suatu saat mau dipakai. Formula/kurs point (Rp per 1 point) diatur
+        terpisah di menu <b>Laporan → 💎 Laporan Point</b>.
+      </div>
+      <div style="margin-top:14px;display:flex;align-items:center;gap:10px;">
+        <input type="checkbox" id="set-point-enabled" ${s.point_enabled!==false?'checked':''}
+          style="width:18px;height:18px;cursor:pointer;" ${currentUser?.role==='admin'?'':'disabled'}>
+        <label for="set-point-enabled" style="font-size:13px;color:var(--text);cursor:pointer;margin:0;">
+          Aktifkan fitur point member
+        </label>
+        ${currentUser?.role==='admin' ? `<button class="btn btn-primary" style="margin-left:auto;" onclick="simpanPointEnabled()">Simpan</button>` : `<span style="margin-left:auto;font-size:11px;color:var(--text3);">Hanya admin yang dapat mengubah</span>`}
+      </div>
+    </div>
+
     <!-- PRINTER FAKTUR -->
     <div class="card" style="margin-bottom:18px;">
       <div class="card-title">🖨️ Printer Faktur (komputer ini)</div>
@@ -9600,6 +10517,17 @@ pages['pengaturan'] = async () => {
           <option value="dotmatrix-teks"${getPrintMode()==='dotmatrix-teks'?' selected':''}>Dot-matrix (LQ310) — teks polos, utk Windows LAWAS (mis. Windows 7, Chrome tak bisa update)</option>
         </select>
         <div style="font-size:11px;color:var(--text3);margin-top:6px;">Disimpan di komputer ini saja (per komputer kasir, bisa beda-beda). Kedua pilihan Dot-matrix sama-sama pakai kertas A4 — bedanya cuma cara merendernya: <b>"tampilan rapi"</b> pakai HTML/tabel (lebih enak dilihat, tapi butuh Chrome yg masih update rutin), <b>"teks polos"</b> cuma tulisan rata-kolom gaya struk klasik (kurang rapi tapi jauh lebih tahan di Chrome versi lama/beku). Kalau hasil cetak di komputer tertentu pecah/kotak-kotak/berantakan, coba ganti ke "teks polos".</div>
+      </div>
+      <div style="margin-top:16px;max-width:420px;">
+        <label>Jenis font cetak faktur</label>
+        <select id="set-fakturfont" style="width:100%;" onchange="simpanFakturFont()">
+          <option value="sans"${getFakturFont()==='sans'?' selected':''}>Sans-serif (Segoe UI) — rapi/modern, default</option>
+          <option value="serif"${getFakturFont()==='serif'?' selected':''}>Serif (Times New Roman) — gaya dokumen formal klasik</option>
+          <option value="mono"${getFakturFont()==='mono'?' selected':''}>Monospace (Courier New) — kontras tajam, jelas di printer jadul</option>
+          <option value="consolas"${getFakturFont()==='consolas'?' selected':''}>Monospace (Consolas) — alternatif monospace lebih ramping</option>
+        </select>
+        <div id="faktur-font-preview" style="margin-top:8px;padding:10px 12px;background:var(--bg3);border-radius:8px;font-size:13px;"></div>
+        <div style="font-size:11px;color:var(--text3);margin-top:6px;">Berlaku utk mode <b>Inkjet/Laser</b> dan Dot-matrix <b>"tampilan rapi"</b>. Dot-matrix <b>"teks polos"</b> SENGAJA selalu monospace apa pun pilihan di sini — layout-nya rata-kolom pakai spasi, kalau diganti font non-monospace kolomnya pasti berantakan.</div>
       </div>
       <div style="font-size:12px;color:var(--text2);margin-top:12px;line-height:1.7;background:rgba(20,184,166,.06);border-left:3px solid var(--teal);padding:10px 14px;border-radius:0 8px 8px 0;">
         <b>Setelan driver LQ310 di Windows (penting, berlaku utk kedua pilihan Dot-matrix):</b><br>
@@ -9646,12 +10574,21 @@ pages['pengaturan'] = async () => {
   </div>`;
   updateResepPreview();
   updateFakturPreview();
+  updateFakturFontPreview();
 };
 
 function simpanPrintMode() {
   const v = $('set-printmode')?.value || 'a5';
   localStorage.setItem('ac_print_mode', v);
   notif('✓ Mode printer disimpan untuk komputer ini');
+}
+
+async function simpanPointEnabled() {
+  const enabled = !!$('set-point-enabled')?.checked;
+  const res = await api('/api/pengaturan/point', {method:'PUT', body:{point_enabled: enabled}});
+  if (!res || res.ok === false) { notif(res?.msg || 'Gagal menyimpan setelan point', 'error'); return; }
+  _pointEnabledGlobal = enabled;
+  notif(enabled ? '✓ Fitur point member diaktifkan' : '✓ Fitur point member dinonaktifkan — saldo point lama tetap tersimpan');
 }
 
 function updateResepPreview() {
@@ -10718,7 +11655,7 @@ async function loadLapPembelian() {
   const dari   = $('lp-dari')?.value   || '';
   const sampai = $('lp-sampai')?.value || '';
   const q      = $('lp-q')?.value      || '';
-  _lpData = await api(`/api/laporan/pembelian?dari=${encodeURIComponent(dari)}&sampai=${encodeURIComponent(sampai)}&q=${encodeURIComponent(q)}`);
+  _lpData = await api(`/api/laporan/pembelian?dari=${encodeURIComponent(dari)}&sampai=${encodeURIComponent(sampai)}&q=${encodeURIComponent(q)}&kd_lokasi=INDUK`);
   renderLpAll();
 }
 
@@ -14229,11 +15166,11 @@ pages['stok-induk'] = async () => {
       <col style="width:30px">
       <col style="width:82px">
       <col>
-      <col style="width:86px">
-      <col style="width:60px">
-      <col style="width:118px">
       <col style="width:104px">
       <col style="width:76px">
+      <col style="width:118px">
+      <col style="width:104px">
+      <col style="width:84px">
       <col style="width:120px">
       <col style="width:96px">
     </colgroup>
@@ -15074,6 +16011,17 @@ document.addEventListener('click', e => {
   if (sbBox && sbBox.style.display !== 'none' && !sbBox.contains(e.target) && e.target.id !== 'rck-bahan-cari') {
     closeSuggestBahan();
   }
+  // Dropdown pencarian barang pembelian (Vendor #pb-barang-dd & Cabang #pbc-barang-dd)
+  // tidak punya listener blur/klik-luar sendiri — tanpa ini, dropdown tetap terbuka
+  // menimpa field lain begitu user klik pindah ke kolom Qty/Harga tanpa memilih item.
+  // (Dropdown barang lain spt #sm-cari-dd / #tk-map-dd-* sudah punya listener sendiri,
+  // sengaja tidak disentuh di sini.)
+  ['pb-barang-dd', 'pbc-barang-dd'].forEach(id => {
+    const box = $(id);
+    if (box && box.classList.contains('open') && !box.closest('.barang-ac-wrap')?.contains(e.target)) {
+      box.classList.remove('open');
+    }
+  });
 });
 
 let _fpHasilTimer;
@@ -16815,11 +17763,31 @@ function renderTemaSwatches() {
          style="background:${t.dot};" onclick="pilihTema('${key}')"></div>`).join('');
 }
 
+// Matikan efek scroll-wheel mengubah angka di SEMUA <input type="number"> (qty, disc,
+// ppn, dst) di seluruh aplikasi — perilaku bawaan browser: kalau kursor kebetulan ada
+// di atas kotak angka saat user scroll halaman (bukan bermaksud ubah nilainya), nilainya
+// malah ikut naik/turun diam-diam. Blur dulu sebelum browser proses delta wheel-nya,
+// supaya scroll tetap scroll halaman seperti biasa, bukan ubah angka.
+document.addEventListener('wheel', e => {
+  if (document.activeElement?.tagName === 'INPUT' && document.activeElement.type === 'number') {
+    document.activeElement.blur();
+  }
+}, { passive: true });
+
 // ─── INIT ────────────────────────────────────────────
 initTheme();
 renderTemaSwatches();
 updateDate();
 setInterval(updateDate, 60000);
+// Nama klinik di layar login/sidebar — ambil dari Pengaturan → Nama Klinik
+// (endpoint publik, tak perlu login) supaya tidak tertinggal teks statis saat diganti.
+api('/api/pengaturan').then(s => {
+  if (!s || !s.klinik_nama) return;
+  klinikInfo.nama = s.klinik_nama;
+  document.title = s.klinik_nama + ' — Sistem Manajemen';
+  const lg = $('login-logo'); if (lg) lg.textContent = s.klinik_nama.toUpperCase();
+  const bn = $('brand-name'); if (bn) bn.textContent = s.klinik_nama;
+}).catch(()=>{});
 </script>
 </body>
 </html>

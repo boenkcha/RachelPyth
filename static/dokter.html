@@ -283,7 +283,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
 <!-- LOGIN -->
 <div id="login-screen">
   <div class="login-card">
-    <div class="login-logo">AppClinic</div>
+    <div class="login-logo" id="login-logo">AppClinic</div>
     <div class="login-sub">Portal Dokter</div>
     <input id="l-user" type="text" placeholder="Username" autocomplete="username">
     <input id="l-pass" type="password" placeholder="Password" autocomplete="current-password">
@@ -298,7 +298,7 @@ body{font-family:'DM Sans',sans-serif;background:var(--bg);color:var(--text);min
   <div class="topbar">
     <div class="topbar-brand">
       <div>
-        <div class="brand-name">AppClinic</div>
+        <div class="brand-name" id="brand-name">AppClinic</div>
         <div class="brand-portal">Portal Dokter</div>
       </div>
     </div>
@@ -861,6 +861,15 @@ document.addEventListener('click', e => {
     $('bahan-suggest-box').style.display = 'none';
   }
 });
+
+// Nama klinik di layar login/topbar — ambil dari Pengaturan → Nama Klinik
+// (endpoint publik, tak perlu login) supaya tidak tertinggal teks statis saat diganti.
+api('/api/pengaturan').then(s => {
+  if (!s || !s.klinik_nama) return;
+  document.title = s.klinik_nama + ' — Portal Dokter';
+  const lg = $('login-logo'); if (lg) lg.textContent = s.klinik_nama;
+  const bn = $('brand-name'); if (bn) bn.textContent = s.klinik_nama;
+}).catch(()=>{});
 </script>
 </body>
 </html>
